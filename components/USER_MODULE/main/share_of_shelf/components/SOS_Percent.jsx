@@ -225,7 +225,7 @@ const SOS_Percent = ({ navigation, route }) => {
       {/* FOOTER ACTIONS */}
       <View className="absolute bottom-0 left-0 right-0 p-6 bg-white border-t border-slate-200">
         <TouchableOpacity
-          onPress={() => navigation.navigate("Dashboard")}
+          // onPress={() => navigation.navigate("Dashboard")}
           className="bg-sky-600 py-4 rounded-xl flex-row items-center justify-center"
         >
           <CheckCircle2 size={20} color="white" />

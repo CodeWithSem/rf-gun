@@ -4,7 +4,7 @@
     "slug": "merch-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/images/delphys7-merch-app-logo.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -29,6 +29,11 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "66d9f374-14b7-4f2c-ac7f-ead770246cfa"
+      }
     }
   }
 }
