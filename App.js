@@ -2,16 +2,44 @@ import React, { useEffect, useState } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import "./global.css";
+import { StatusBar } from "expo-status-bar";
 import * as Font from "expo-font";
+
+// Import your custom CSS for NativeWind
+import "./global.css";
+
+// Components
 import Login from "./components/AUTHENTICATION/Login";
-import Welcome from "./components/TDS/welcome/Welcome";
-import MCP_Selection from "./components/TDS/mcp_selection/MCP_Selection";
-import Store_Capture from "./components/TDS/store_capture/Store_Capture";
-import Camera_Overlay from "./components/TDS/store_capture/Camera_Overlay";
-import Main from "./components/TDS/main/Main";
-import OSA from "./components/TDS/main/osa/OSA";
-import Box_Counter from "./components/TDS/box_counter/Box_Counter";
+import Register from "./components/AUTHENTICATION/Register";
+import Dashboard from "./components/USER_MODULE/dashboard/Dashboard";
+import MCP_Selection from "./components/USER_MODULE/mcp_selection/MCP_Selection";
+import Capture_Store_Image from "./components/USER_MODULE/capture_store_image/Capture_Store_Image";
+import Main from "./components/USER_MODULE/main/Main";
+import Inventory_Stock from "./components/USER_MODULE/main/inventory_stock/Inventory_Stock";
+import Stock_Audit from "./components/USER_MODULE/main/inventory_stock/components/Stock_Audit";
+import OSA from "./components/USER_MODULE/main/inventory_stock/components/OSA";
+import Expiry_Tracking from "./components/USER_MODULE/main/inventory_stock/components/Expiry_Tracking";
+import Returns from "./components/USER_MODULE/main/inventory_stock/components/Returns";
+import Share_Of_Shelf from "./components/USER_MODULE/main/share_of_shelf/Share_Of_Shelf";
+import Linear_Meter from "./components/USER_MODULE/main/share_of_shelf/components/Linear_Meter";
+import SOS_Percent from "./components/USER_MODULE/main/share_of_shelf/components/SOS_Percent";
+import Competitor_Track from "./components/USER_MODULE/main/share_of_shelf/components/Competitor_Track";
+import Planogram_Comp from "./components/USER_MODULE/main/share_of_shelf/components/Planogram_Comp";
+import Planogram_Select from "./components/USER_MODULE/main/share_of_shelf/components/Planogram_Select";
+import Pricing_Promo from "./components/USER_MODULE/main/pricing_promo/Pricing_Promo";
+import Price_Audit from "./components/USER_MODULE/main/pricing_promo/components/Price_Audit";
+import Promo_Comp from "./components/USER_MODULE/main/pricing_promo/components/Promo_Comp";
+import Activation_Check from "./components/USER_MODULE/main/pricing_promo/components/Activation_Check";
+import POSM_Audit from "./components/USER_MODULE/main/pricing_promo/components/POSM_Audit";
+import Ordering from "./components/USER_MODULE/main/ordering/Ordering";
+import Suggested_Order from "./components/USER_MODULE/main/ordering/components/Suggested_Order";
+import Delivery_Track from "./components/USER_MODULE/main/ordering/components/Delivery_Track";
+import Gap_Analysis from "./components/USER_MODULE/main/ordering/components/Gap_Analysis";
+import Store_Insights from "./components/USER_MODULE/main/store_insights/Store_Insights";
+import Person_Feedback from "./components/USER_MODULE/main/store_insights/components/Person_Feedback";
+import SOS_Survey from "./components/USER_MODULE/main/store_insights/components/SOS_Survey";
+import Incident_Report from "./components/USER_MODULE/main/store_insights/components/Incident_Report";
+import Store_Selection from "./components/USER_MODULE/store_selection/Store_Selection";
 
 const Stack = createNativeStackNavigator();
 
@@ -21,102 +49,34 @@ export default function App() {
 
   useEffect(() => {
     async function loadFonts() {
-      await Font.loadAsync({
-        "Outfit-Regular": require("./assets/fonts/Outfit-Regular.ttf"),
-        "Outfit-Bold": require("./assets/fonts/Outfit-Bold.ttf"),
-        "Outfit-Black": require("./assets/fonts/Outfit-Black.ttf"),
-        "Outfit-ExtraBold": require("./assets/fonts/Outfit-ExtraBold.ttf"),
-        "Outfit-ExtraLight": require("./assets/fonts/Outfit-ExtraLight.ttf"),
-        "Outfit-Light": require("./assets/fonts/Outfit-Light.ttf"),
-        "Outfit-Medium": require("./assets/fonts/Outfit-Medium.ttf"),
-        "Outfit-SemiBold": require("./assets/fonts/Outfit-SemiBold.ttf"),
-        "Outfit-Thin": require("./assets/fonts/Outfit-Thin.ttf"),
-      });
-      setFontsLoaded(true);
+      try {
+        await Font.loadAsync({
+          "Outfit-Regular": require("./assets/fonts/Outfit-Regular.ttf"),
+          "Outfit-Bold": require("./assets/fonts/Outfit-Bold.ttf"),
+          "Outfit-Black": require("./assets/fonts/Outfit-Black.ttf"),
+          "Outfit-ExtraBold": require("./assets/fonts/Outfit-ExtraBold.ttf"),
+          "Outfit-ExtraLight": require("./assets/fonts/Outfit-ExtraLight.ttf"),
+          "Outfit-Light": require("./assets/fonts/Outfit-Light.ttf"),
+          "Outfit-Medium": require("./assets/fonts/Outfit-Medium.ttf"),
+          "Outfit-SemiBold": require("./assets/fonts/Outfit-SemiBold.ttf"),
+          "Outfit-Thin": require("./assets/fonts/Outfit-Thin.ttf"),
+        });
+      } catch (e) {
+        console.warn("Font loading error:", e);
+      } finally {
+        setFontsLoaded(true);
+      }
     }
-
     loadFonts();
   }, []);
 
-  const [selected_store_data, set_selected_store_data] = useState({});
-  const [captured_store_image, set_captured_store_image] = useState(null);
-
-  // + MCP List
-  const [mcp_list, set_mcp_list] = useState([
-    {
-      id: 1,
-      store_code: "STR-00001",
-      store_desc: "FISHERMALL SUPERMARKET - DAGAT-DAGATAN AVE. MALABON",
-      plan_visit: "01-14-2026",
-      actual_visit: "MM-DD-YYYY",
-      osa_status: true,
-      md_status: true,
-      ep_status: true,
-      ta_status: true,
-    },
-    {
-      id: 2,
-      store_code: "STR-00002",
-      store_desc: "MALABON CITISQUARE - DAGAT-DAGATAN AVE. MALABON",
-      plan_visit: "01-14-2026",
-      actual_visit: "",
-      osa_status: true,
-      md_status: true,
-      ep_status: true,
-      ta_status: false,
-    },
-    {
-      id: 3,
-      store_code: "STR-00003",
-      store_desc: "SM GRAND CENTRAL - CALOOCAN MONUMENTO",
-      plan_visit: "01-14-2026",
-      actual_visit: "MM-DD-YYYY",
-      osa_status: false,
-      md_status: false,
-      ep_status: false,
-      ta_status: false,
-    },
-  ]);
-  // - MCP List
-
-  // + OSA Data
-  const brand_list = [
-    { id: 0, brand_code: "", brand_desc: "All Brands" },
-    { id: 1, brand_code: "B-001", brand_desc: "Brand Data A" },
-    { id: 2, brand_code: "B-002", brand_desc: "Brand Data B" },
-    { id: 3, brand_code: "B-003", brand_desc: "Brand Data C" },
-    { id: 4, brand_code: "B-004", brand_desc: "Brand Data D" },
-    { id: 5, brand_code: "B-005", brand_desc: "Brand Data E" },
-    { id: 6, brand_code: "B-006", brand_desc: "Brand Data F" },
-    { id: 7, brand_code: "B-007", brand_desc: "Brand Data G" },
-    { id: 8, brand_code: "B-008", brand_desc: "Brand Data H" },
-    { id: 9, brand_code: "B-009", brand_desc: "Brand Data I" },
-    { id: 10, brand_code: "B-010", brand_desc: "Brand Data J" },
-  ];
-  const category_list = [
-    { id: 0, category_code: "", category_desc: "All Categories" },
-    { id: 1, category_code: "C-001", category_desc: "Categogry Data A" },
-    { id: 2, category_code: "C-002", category_desc: "Categogry Data B" },
-    { id: 3, category_code: "C-003", category_desc: "Categogry Data C" },
-    { id: 4, category_code: "C-004", category_desc: "Categogry Data D" },
-    { id: 5, category_code: "C-005", category_desc: "Categogry Data E" },
-    { id: 6, category_code: "C-006", category_desc: "Categogry Data F" },
-  ];
-  const brand_h_list = [
-    { id: 1, brand_code: "B-001", category_code: "C-001" },
-    { id: 2, brand_code: "B-001", category_code: "C-002" },
-    { id: 3, brand_code: "B-001", category_code: "C-003" },
-    { id: 4, brand_code: "B-002", category_code: "C-004" },
-    { id: 5, brand_code: "B-003", category_code: "C-005" },
-    { id: 6, brand_code: "B-003", category_code: "C-006" },
-  ];
-  // - OSA Data
   if (!fontsLoaded) return null;
 
   return (
     <SafeAreaProvider>
+      <StatusBar style="dark" />
       <NavigationContainer>
-        <SafeAreaView className="flex-1" edges={["bottom"]}>
+        <SafeAreaView className="flex-1 bg-white" edges={["bottom"]}>
           <Stack.Navigator
             initialRouteName="Login"
             screenOptions={{
@@ -124,68 +84,55 @@ export default function App() {
               animation: "fade",
             }}
           >
-            <Stack.Screen
-              name="Login"
-              children={() => <Login app_version={app_version} />}
-            />
-            <Stack.Screen
-              name="Welcome"
-              children={() => <Welcome app_version={app_version} />}
-            />
-            <Stack.Screen
-              name="MCP Selection"
-              children={() => (
-                <MCP_Selection
-                  app_version={app_version}
-                  mcp_list={mcp_list}
-                  set_selected_store_data={set_selected_store_data}
-                  set_captured_store_image={set_captured_store_image}
-                />
-              )}
-            />
-            <Stack.Screen
-              name="Store Capture"
-              children={() => (
-                <Store_Capture
-                  selected_store_data={selected_store_data}
-                  captured_store_image={captured_store_image}
-                />
-              )}
-            />
-            <Stack.Screen
-              name="Capture Image"
-              children={() => (
-                <Camera_Overlay
-                  selected_store_data={selected_store_data}
-                  set_captured_store_image={set_captured_store_image}
-                />
-              )}
-            />
+            {/* Login Screen */}
+            <Stack.Screen name="Login">
+              {(props) => <Login {...props} app_version={app_version} />}
+            </Stack.Screen>
 
+            {/* Register Screen */}
+            <Stack.Screen name="Register" component={Register} />
+
+            {/* Dashboard Screen */}
+            <Stack.Screen name="Dashboard" component={Dashboard} />
+            {/* MCP Selection Screen */}
+            <Stack.Screen name="MCPSelection" component={MCP_Selection} />
+            {/* Store Selection Screen */}
+            <Stack.Screen name="StoreSelection" component={Store_Selection} />
             <Stack.Screen
-              name="Main"
-              children={() => (
-                <Main
-                  app_version={app_version}
-                  selected_store_data={selected_store_data}
-                />
-              )}
+              name="CaptureStoreImage"
+              component={Capture_Store_Image}
             />
-            <Stack.Screen
-              name="On-Shelf Availability"
-              children={() => (
-                <OSA
-                  app_version={app_version}
-                  mcp_list={mcp_list}
-                  set_selected_store_data={set_selected_store_data}
-                  set_captured_store_image={set_captured_store_image}
-                  brand_list={brand_list}
-                  category_list={category_list}
-                  brand_h_list={brand_h_list}
-                />
-              )}
-            />
-            {/* <Stack.Screen name="Box Counter" children={() => <Box_Counter />} /> */}
+            {/* Main Page */}
+            <Stack.Screen name="Main" component={Main} />
+            {/* Inventory & Stock */}
+            <Stack.Screen name="InventoryStock" component={Inventory_Stock} />
+            <Stack.Screen name="StockAudit" component={Stock_Audit} />
+            <Stack.Screen name="OSA" component={OSA} />
+            <Stack.Screen name="ExpiryTracking" component={Expiry_Tracking} />
+            <Stack.Screen name="Returns" component={Returns} />
+            {/* Share of Shelf */}
+            <Stack.Screen name="SOS" component={Share_Of_Shelf} />
+            <Stack.Screen name="LinearMeter" component={Linear_Meter} />
+            <Stack.Screen name="SOSPercent" component={SOS_Percent} />
+            <Stack.Screen name="CompetitorTrack" component={Competitor_Track} />
+            <Stack.Screen name="PlanogramComp" component={Planogram_Comp} />
+            <Stack.Screen name="PlanogramSelect" component={Planogram_Select} />
+            {/* Pricing & Promos */}
+            <Stack.Screen name="PricingPromo" component={Pricing_Promo} />
+            <Stack.Screen name="PriceAudit" component={Price_Audit} />
+            <Stack.Screen name="PromoComp" component={Promo_Comp} />
+            <Stack.Screen name="ActivationCheck" component={Activation_Check} />
+            <Stack.Screen name="POSMAudit" component={POSM_Audit} />
+            {/* Ordering */}
+            <Stack.Screen name="Ordering" component={Ordering} />
+            <Stack.Screen name="SuggestedOrder" component={Suggested_Order} />
+            <Stack.Screen name="DeliveryTrack" component={Delivery_Track} />
+            <Stack.Screen name="GapAnalysis" component={Gap_Analysis} />
+            {/* Store Insights */}
+            <Stack.Screen name="StoreInsights" component={Store_Insights} />
+            <Stack.Screen name="PersonFeedback" component={Person_Feedback} />
+            <Stack.Screen name="SOSSurvey" component={SOS_Survey} />
+            <Stack.Screen name="IncidentReport" component={Incident_Report} />
           </Stack.Navigator>
         </SafeAreaView>
       </NavigationContainer>

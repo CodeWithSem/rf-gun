@@ -1,121 +1,220 @@
 import React, { useState } from "react";
 import {
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
+  View,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  Image,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
-import { useNavigation } from "@react-navigation/native";
-import Custom_Text from "@assets/elements/text/Custom_Text";
-import { Eye, EyeOff } from "lucide-react-native";
-import Delphys_Logo from "@assets/images/delphys-sidebar-logo.png";
+import { Eye, EyeOff, Lock, ChevronRight, User } from "lucide-react-native";
+// Firebase Imports
+import { db } from "../../assets/scripts/firebaseConfig";
+import { collection, query, where, getDocs } from "firebase/firestore";
 
-const Login = ({ app_version }) => {
-  const navigation = useNavigation();
-  const [email, setEmail] = useState("");
+const Login = ({ navigation, app_version }) => {
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [isFocused, setIsFocused] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
-  const handle_login = () => {
-    navigation.navigate("Welcome");
+  const handleLogin = async () => {
+    if (!username || !password) {
+      setErrorMessage("Please enter both username and password");
+      return;
+    }
+
+    setErrorMessage(""); // Clear error on new attempt
+    setLoading(true);
+    try {
+      // Query Firestore for a user with matching username
+      const usersRef = collection(db, "AUTHENTICATION", "TBL_USER", "DATA");
+      const q = query(usersRef, where("username", "==", username));
+      const querySnapshot = await getDocs(q);
+
+      if (querySnapshot.empty) {
+        setErrorMessage("User not found. Please try again.");
+      } else {
+        const userData = querySnapshot.docs[0].data();
+        // Plain text check (Note: For production, use hashed passwords!)
+        if (userData.password === password) {
+          setErrorMessage("");
+          navigation.navigate("Dashboard", { user: userData }); // use replace so they can't go back to login
+        } else {
+          setErrorMessage("Incorrect credentials. Please try again.");
+        }
+      }
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Error", "Something went wrong connectng to the database");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <React.Fragment>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        // behavior="padding"
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
-      >
-        {/* Full Page Container */}
-        <ScrollView
-          contentContainerStyle={{
-            flexGrow: 1,
-            justifyContent: "center",
-            alignItems: "center",
-            paddingHorizontal: 30,
-            backgroundColor: "#f3f4f6",
-          }}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* Card Container */}
-          <View className="w-full bg-white rounded-2xl py-6 px-8 shadow-lg shadow-gray-400 dark:bg-gray-200">
-            <View className="flex justify-center items-center w-full py-5">
-              <View className="h-[120] w-[120] bg-sky-100/50 rounded-lg overflow-hidden">
-                <Image
-                  source={Delphys_Logo} // online image
-                  style={{ width: "100%", height: "100%" }}
-                  resizeMode="cover" // can also use 'contain' or 'stretch'
-                />
-              </View>
-            </View>
-            {/* App Title */}
-            <Custom_Text className="text-2xl font-bold text-sky-600 mb-8 text-center mt-5">
-              MERCH APP SOLUTION
-            </Custom_Text>
-
-            {/* Email Input */}
-            <TextInput
-              value={email}
-              onChangeText={setEmail}
-              placeholder="Username"
-              placeholderTextColor="#9ca3af"
-              className="w-full border border-gray-300 rounded-lg p-4 mb-4 text-base"
-              style={{ fontFamily: "Outfit-Regular" }}
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      className="flex-1 bg-white"
+    >
+      <ScrollView contentContainerStyle={{ flexGrow: 1 }} className="px-8">
+        {/* Header Section */}
+        <View className="mt-28 mb-12">
+          <View className="bg-sky-100 w-16 h-16 rounded-xl items-center justify-center mb-6">
+            <Image
+              source={require("../../assets/images/delphys-sidebar-logo.png")}
+              className="w-10 h-10"
+              resizeMode="contain"
             />
+          </View>
+          <Text
+            style={{ fontFamily: "Outfit-Bold" }}
+            className="text-4xl text-slate-600 tracking-tight"
+          >
+            Welcome
+          </Text>
+          <Text
+            style={{ fontFamily: "Outfit-Regular" }}
+            className="text-lg text-slate-500 mt-2"
+          >
+            Enter your credentials for{" "}
+            <Text className="text-sky-600 font-semibold">
+              Delphys7 Merch App
+            </Text>
+          </Text>
+        </View>
 
-            {/* Password Input */}
-            {/* Password Input with visibility toggle */}
-            <View className="w-full relative">
+        {/* Form */}
+        <View className="space-y-5">
+          <View>
+            <Text
+              style={{ fontFamily: "Outfit-Medium" }}
+              className={`mb-2 ml-1 ${isFocused === "user" ? "text-sky-600" : "text-slate-600"}`}
+            >
+              Username
+            </Text>
+            <View
+              className={`flex-row items-center bg-slate-50 border rounded-xl px-5 py-4 ${isFocused === "user" ? "border-sky-500 bg-white" : "border-slate-200"}`}
+            >
+              <User
+                size={20}
+                color={isFocused === "user" ? "#0284c7" : "#94a3b8"}
+              />
               <TextInput
-                value={password}
-                onChangeText={setPassword}
-                placeholder="Password"
-                secureTextEntry={!showPassword}
-                placeholderTextColor="#9ca3af"
-                className="w-full border border-gray-300 rounded-lg p-4 text-base pr-12"
+                placeholder="Enter username"
                 style={{ fontFamily: "Outfit-Regular" }}
+                className="flex-1 text-slate-900 ml-3"
+                value={username}
+                onFocus={() => setIsFocused("user")}
+                onBlur={() => setIsFocused(null)}
+                onChangeText={setUsername}
+                autoCapitalize="none"
+              />
+            </View>
+          </View>
+
+          <View className="mt-4">
+            <Text
+              style={{ fontFamily: "Outfit-Medium" }}
+              className={`mb-2 ml-1 ${isFocused === "pass" ? "text-sky-600" : "text-slate-600"}`}
+            >
+              Password
+            </Text>
+            <View
+              className={`flex-row items-center bg-slate-50 border rounded-xl px-5 py-4 ${isFocused === "pass" ? "border-sky-500 bg-white" : "border-slate-200"}`}
+            >
+              <Lock
+                size={20}
+                color={isFocused === "pass" ? "#0284c7" : "#94a3b8"}
+              />
+              <TextInput
+                placeholder="Enter password"
+                style={{ fontFamily: "Outfit-Regular" }}
+                className="flex-1 text-slate-900 ml-3"
+                value={password}
+                onFocus={() => setIsFocused("pass")}
+                onBlur={() => setIsFocused(null)}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
               />
               <TouchableOpacity
-                className="absolute right-4 top-1/2 -translate-y-1/2"
                 onPress={() => setShowPassword(!showPassword)}
+                className="mr-2"
               >
                 {showPassword ? (
-                  <Eye color="#9ca3af" size={20} />
+                  <Eye size={20} color="#94a3b8" />
                 ) : (
-                  <EyeOff color="#9ca3af" size={20} />
+                  <EyeOff size={20} color="#94a3b8" />
                 )}
               </TouchableOpacity>
             </View>
-            <View className="flex justify-end h-[24]">
-              {/* <Custom_Text className="text-red-500 text-sm">
-                Invalid credentials. Please try again.
-              </Custom_Text> */}
-            </View>
-
-            {/* Login Button */}
-            <TouchableOpacity
-              className="w-full bg-sky-600 py-4 rounded-lg active:bg-sky-700 mt-[40] mb-[10]"
-              onPress={handle_login}
-            >
-              <Custom_Text className="text-white text-center text-base font-bold tracking-[2px]">
-                LOGIN
-              </Custom_Text>
-            </TouchableOpacity>
           </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-      <View className="absolute bottom-[5] left-[5]">
-        <Custom_Text className="text-gray-300 text-xs">
-          {app_version}
-        </Custom_Text>
-      </View>
-    </React.Fragment>
+          {/* Error Message Display */}
+          {errorMessage ? (
+            <View className="mt-2 ml-1 flex-row items-center">
+              <Text
+                style={{ fontFamily: "Outfit-Medium" }}
+                className="text-red-500 text-sm"
+              >
+                {errorMessage}
+              </Text>
+            </View>
+          ) : null}
+          <TouchableOpacity
+            onPress={handleLogin}
+            disabled={loading}
+            activeOpacity={0.8}
+            className={`mt-10 flex-row items-center justify-center py-5 rounded-xl bg-sky-600`}
+          >
+            {loading ? (
+              <ActivityIndicator color="white" size="small" />
+            ) : (
+              <Text
+                style={{ fontFamily: "Outfit-Bold" }}
+                className="text-white text-lg mr-2 tracking-[2px]"
+              >
+                LOGIN
+              </Text>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* Registration Section */}
+        <View className="mt-auto mb-10 items-center">
+          <Text
+            style={{ fontFamily: "Outfit-Regular" }}
+            className="text-slate-400 text-xs uppercase tracking-widest"
+          >
+            System Version {app_version}
+          </Text>
+          {/* <TouchableOpacity
+            onPress={() => navigation.navigate("Register")} // This does the redirect
+            className="mt-3 py-2 px-6 border border-sky-100 bg-sky-50 rounded-full"
+          >
+            <Text
+              style={{ fontFamily: "Outfit-SemiBold" }}
+              className="text-sky-600 text-sm"
+            >
+              Don't have an account?{" "}
+              <Text className="font-bold underline">Register</Text>
+            </Text>
+          </TouchableOpacity> */}
+          <Text
+            style={{ fontFamily: "Outfit-Regular" }}
+            className="text-slate-400 text-xs mt-2"
+          >
+            Powered by QS IT Services
+            {/* System Version {app_version} */}
+          </Text>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
