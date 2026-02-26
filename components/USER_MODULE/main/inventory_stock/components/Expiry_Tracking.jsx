@@ -313,7 +313,7 @@ const Expiry_Tracking = ({ navigation, route }) => {
 
       {/* SEARCH */}
       <View className="px-6 py-4 bg-white border-b border-slate-200">
-        <View className="bg-slate-50 flex-row items-center px-4 rounded-lg border border-slate-200 shadow-sm">
+        <View className="bg-slate-50 flex-row items-center px-4 rounded-lg border border-slate-200">
           <Search size={20} color="#94a3b8" />
           <TextInput
             placeholder="Search active batches..."
@@ -335,7 +335,7 @@ const Expiry_Tracking = ({ navigation, route }) => {
         renderItem={({ item }) => {
           const style = getStatusStyle(item.status);
           return (
-            <View className="bg-white p-5 rounded-xl mb-4 border border-slate-200 shadow-sm">
+            <View className="bg-white p-5 rounded-xl mb-4 border border-slate-200">
               <View className="flex-row justify-between items-start mb-4">
                 <View className="flex-1">
                   <Text
@@ -348,7 +348,7 @@ const Expiry_Tracking = ({ navigation, route }) => {
                     style={{ fontFamily: "Outfit-Regular" }}
                     className="text-slate-400 text-xs"
                   >
-                    SKU: {item.sku}
+                    {item.sku}
                   </Text>
                   <View className="flex-row items-center mt-2">
                     <Text
@@ -436,6 +436,17 @@ const Expiry_Tracking = ({ navigation, route }) => {
             </View>
           );
         }}
+        ListEmptyComponent={() => (
+          <View className="items-center justify-center mt-20">
+            <PackageX size={48} color="#cbd5e1" />
+            <Text
+              style={{ fontFamily: "Outfit-Regular" }}
+              className="text-slate-400 mt-4"
+            >
+              No expiry tracking yet.
+            </Text>
+          </View>
+        )}
       />
 
       {/* UPDATE MODAL */}
@@ -491,7 +502,7 @@ const Expiry_Tracking = ({ navigation, route }) => {
             )}
             <TouchableOpacity
               onPress={saveUpdatedDate}
-              className="bg-sky-600 w-full py-5 rounded-xl items-center shadow-lg"
+              className="bg-sky-600 w-full py-5 rounded-xl items-center"
             >
               <Text
                 style={{ fontFamily: "Outfit-Bold" }}
@@ -595,7 +606,7 @@ const Expiry_Tracking = ({ navigation, route }) => {
                       style={{ fontFamily: "Outfit-Regular" }}
                       className="text-sky-600 text-xs"
                     >
-                      SKU: {selectedMaster?.sku}
+                      {selectedMaster?.sku}
                     </Text>
                   </View>
 
@@ -659,7 +670,7 @@ const Expiry_Tracking = ({ navigation, route }) => {
 
                   <TouchableOpacity
                     onPress={handleAddBatch}
-                    className="bg-sky-600 w-full py-5 rounded-xl items-center shadow-lg"
+                    className="bg-sky-600 w-full py-5 rounded-xl items-center"
                   >
                     <Text
                       style={{ fontFamily: "Outfit-Bold" }}
@@ -700,7 +711,7 @@ const Expiry_Tracking = ({ navigation, route }) => {
             <View className="w-full">
               <TouchableOpacity
                 onPress={confirmDelete}
-                className="bg-red-500 w-full py-4 rounded-xl items-center mb-3 shadow-lg shadow-red-200"
+                className="bg-red-500 w-full py-4 rounded-xl items-center mb-3"
               >
                 <Text
                   style={{ fontFamily: "Outfit-Bold" }}
@@ -735,7 +746,7 @@ const Expiry_Tracking = ({ navigation, route }) => {
           setDate(new Date());
           setAddModalVisible(true);
         }}
-        className="absolute bottom-32 right-6 bg-sky-600 w-14 h-14 rounded-full items-center justify-center shadow-lg"
+        className="absolute bottom-32 right-6 bg-sky-600 w-14 h-14 rounded-full items-center justify-center"
       >
         <Plus size={24} color="white" />
       </TouchableOpacity>
@@ -866,7 +877,7 @@ const Expiry_Tracking = ({ navigation, route }) => {
                 style={{ fontFamily: "Outfit-Regular" }}
                 className="text-slate-400 text-xs mb-3"
               >
-                SKU: {selectedPullItem?.sku}
+                {selectedPullItem?.sku}
               </Text>
               <View className="flex-row items-center">
                 <Text className="text-slate-600 text-xs font-bold mr-4">

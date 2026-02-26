@@ -23,6 +23,7 @@ import {
   CheckCircle2,
   XCircle,
   Save,
+  PackageX,
 } from "lucide-react-native";
 
 // API Imports
@@ -175,6 +176,27 @@ const OSA = ({ navigation, route }) => {
     </TouchableOpacity>
   );
 
+  const statusConfig = {
+    critical: {
+      bg: "bg-yellow-50",
+      border: "border-yellow-100",
+      text: "text-yellow-500",
+      button: "bg-yellow-500",
+      icon: "#f59e0b",
+    },
+    overstock: {
+      bg: "bg-sky-50",
+      border: "border-sky-100",
+      text: "text-sky-600",
+      button: "bg-sky-600",
+      icon: "#0284c7",
+    },
+  };
+
+  // Fallback to sky if status is missing during transition
+  const currentConfig =
+    statusConfig[activeItem?.status] || statusConfig.overstock;
+
   // LOADING SCREEN
   if (loading) {
     return (
@@ -216,7 +238,7 @@ const OSA = ({ navigation, route }) => {
 
       {/* SEARCH */}
       <View className="px-6 py-4 bg-white border-b border-slate-200">
-        <View className="bg-slate-50 flex-row items-center px-4 rounded-lg border border-slate-200 shadow-sm">
+        <View className="bg-slate-50 flex-row items-center px-4 rounded-lg border border-slate-200">
           <Search size={20} color="#94a3b8" />
           <TextInput
             placeholder="Search SKU..."
@@ -251,9 +273,13 @@ const OSA = ({ navigation, route }) => {
                   {item.qty ? (
                     <Text
                       style={{ fontFamily: "Outfit-Bold" }}
-                      className="ml-2 text-orange-400 text-[10px] uppercase bg-orange-50 px-1 rounded"
+                      className={`ml-2 text-[10px] uppercase px-2 py-0.5 rounded ${
+                        item.status === "critical"
+                          ? "text-yellow-500 bg-yellow-50"
+                          : "text-sky-600 bg-sky-50"
+                      }`}
                     >
-                      Quantity: {item.qty}
+                      QUANTITY: {item.qty}
                     </Text>
                   ) : null}
                 </View>
@@ -285,9 +311,9 @@ const OSA = ({ navigation, route }) => {
                   />
                 }
                 active={item.status === "critical"}
-                activeBg="bg-amber-50"
-                activeBorder="border-amber-500"
-                activeText="text-amber-700"
+                activeBg="bg-yellow-50"
+                activeBorder="border-yellow-500"
+                activeText="text-yellow-500"
                 onPress={() => toggleStatus(item.id, "critical")}
               />
 
@@ -296,13 +322,13 @@ const OSA = ({ navigation, route }) => {
                 icon={
                   <PackagePlus
                     size={16}
-                    color={item.status === "overstock" ? "#f59e0b" : "#94a3b8"}
+                    color={item.status === "overstock" ? "#0284c7" : "#94a3b8"}
                   />
                 }
                 active={item.status === "overstock"}
-                activeBg="bg-amber-50"
-                activeBorder="border-amber-500"
-                activeText="text-amber-700"
+                activeBg="bg-sky-50"
+                activeBorder="border-sky-600"
+                activeText="text-sky-600"
                 onPress={() => toggleStatus(item.id, "overstock")}
               />
 
@@ -362,6 +388,17 @@ const OSA = ({ navigation, route }) => {
                 </View>
               </View>
             )}
+          </View>
+        )}
+        ListEmptyComponent={() => (
+          <View className="items-center justify-center mt-20">
+            <PackageX size={48} color="#cbd5e1" />
+            <Text
+              style={{ fontFamily: "Outfit-Regular" }}
+              className="text-slate-400 mt-4"
+            >
+              No OSA yet.
+            </Text>
           </View>
         )}
         keyExtractor={(item) => item.id}
@@ -458,11 +495,12 @@ const OSA = ({ navigation, route }) => {
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           className="flex-1 bg-slate-900/60 justify-end"
         >
-          <View className="bg-white rounded-t-[40px] px-8 pt-8 pb-10">
+          <View className="bg-white rounded-t-[40px] px-8 pt-8 pb-10 shadow-2xl">
+            {/* Header */}
             <View className="flex-row justify-between items-center mb-6">
               <View className="flex-row items-center">
-                <View className="bg-orange-100 p-2 rounded-lg mr-3">
-                  <Package size={20} color="#f59e0b" />
+                <View className={`${currentConfig.bg} p-2 rounded-lg mr-3`}>
+                  <Package size={20} color={currentConfig.icon} />
                 </View>
                 <Text
                   style={{ fontFamily: "Outfit-Bold" }}
@@ -478,6 +516,8 @@ const OSA = ({ navigation, route }) => {
                 <X size={20} color="#64748b" />
               </TouchableOpacity>
             </View>
+
+            {/* Product Info */}
             <Text
               style={{ fontFamily: "Outfit-Bold" }}
               className="text-slate-800 text-lg mb-1"
@@ -488,34 +528,42 @@ const OSA = ({ navigation, route }) => {
               style={{ fontFamily: "Outfit-Regular" }}
               className="text-slate-400 text-sm mb-8"
             >
-              Update existing stock count.
+              Update existing stock count for this item.
             </Text>
+
+            {/* Dynamic Label */}
             <View className="flex-row items-center mb-2">
-              <Warehouse size={16} color="#f59e0b" />
+              <Warehouse size={16} color={currentConfig.icon} />
               <Text
                 style={{ fontFamily: "Outfit-Bold" }}
-                className="text-orange-400 ml-2 text-xs uppercase"
+                className={`${currentConfig.text} ml-2 text-xs uppercase tracking-widest`}
               >
-                Stock Quantity
+                Current Stock Quantity
               </Text>
             </View>
+
+            {/* Dynamic Input */}
             <TextInput
               autoFocus
               keyboardType="numeric"
               value={tempQty}
               onChangeText={setTempQty}
               placeholder="0"
-              className="bg-orange-50 border border-orange-100 rounded-xl p-5 font-[Outfit-Bold] text-2xl text-slate-700 mb-8"
+              cursorColor={currentConfig.icon}
+              selectionColor={currentConfig.icon}
+              className={`${currentConfig.bg} border ${currentConfig.border} rounded-2xl p-5 font-[Outfit-Bold] text-2xl text-slate-900 mb-8`}
             />
+
+            {/* Dynamic Action Button */}
             <TouchableOpacity
               onPress={handleSaveModalData}
-              className="bg-orange-400 w-full py-5 rounded-xl items-center shadow-lg shadow-sky-200"
+              className={`${currentConfig.button} w-full py-5 rounded-2xl items-center shadow-lg shadow-slate-200`}
             >
               <Text
                 style={{ fontFamily: "Outfit-Bold" }}
                 className="text-white text-lg"
               >
-                Confirm Count
+                Confirm {activeItem?.status}
               </Text>
             </TouchableOpacity>
           </View>

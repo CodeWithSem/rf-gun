@@ -5,7 +5,7 @@ import { doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
 
 export const save_stock_audit_api = async (
   storeId,
-  userId,
+  username,
   products,
   isFinal = false,
 ) => {
@@ -21,7 +21,7 @@ export const save_stock_audit_api = async (
       "STORES",
       storeId,
       "USERS",
-      userId,
+      username,
       "DAILY_AUDITS", // Sub-collection for dates
       dateString, // Unique doc for each day
     );
@@ -34,7 +34,7 @@ export const save_stock_audit_api = async (
         status: isFinal ? "submitted" : "draft",
         inventory: products,
         storeId: storeId,
-        userId: userId,
+        username: username,
       },
       { merge: true },
     );
@@ -46,7 +46,7 @@ export const save_stock_audit_api = async (
   }
 };
 
-export const fetch_stock_audit_api = async (storeId, userId) => {
+export const fetch_stock_audit_api = async (storeId, username) => {
   try {
     const today = new Date();
     const dateString = today.toISOString().split("T")[0];
@@ -59,7 +59,7 @@ export const fetch_stock_audit_api = async (storeId, userId) => {
       "STORES",
       storeId,
       "USERS",
-      userId,
+      username,
       "DAILY_AUDITS",
       dateString,
     );
@@ -81,7 +81,7 @@ export const fetch_stock_audit_api = async (storeId, userId) => {
 
 export const save_audit_history_api = async (
   storeId,
-  userId,
+  username,
   products,
   isFinal = false,
 ) => {
@@ -90,7 +90,7 @@ export const save_audit_history_api = async (
     const dateString = today.toISOString().split("T")[0];
 
     // Create a unique ID for this specific user/store/day combo
-    const docId = `${dateString}_${storeId}_${userId}`;
+    const docId = `${dateString}_${storeId}_${username}`;
 
     const historyRef = doc(
       db,
@@ -105,7 +105,7 @@ export const save_audit_history_api = async (
       {
         auditId: docId,
         storeId: storeId,
-        userId: userId,
+        username: username,
         auditDate: dateString,
         inventory: products,
         status: isFinal ? "submitted" : "draft",

@@ -4,7 +4,7 @@
     "slug": "merch-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/delphys7-merch-app-logo.png",
+    "icon": "./assets/images/delphys7-icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -20,11 +20,12 @@
     },
     "android": {
       "permissions": ["CAMERA"],
+      "softwareKeyboardLayoutMode": "adjustResize",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/images/delphys7-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true,
+      "edgeToEdgeEnabled": false,
       "package": "com.qsitdev.merchapp"
     },
     "web": {

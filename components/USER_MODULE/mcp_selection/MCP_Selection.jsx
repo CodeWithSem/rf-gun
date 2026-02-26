@@ -151,12 +151,12 @@ const MCP_Selection = ({ route, navigation }) => {
         };
       case "partially complete":
         return {
-          color: "#ea580c",
-          icon: <Clock size={16} color="#ea580c" />,
-          bg: "bg-orange-50",
-          badge: "bg-orange-500",
-          border: "border-orange-200",
-          text: "text-orange-800",
+          color: "#facc15",
+          icon: <Clock size={16} color="#facc15" />,
+          bg: "bg-yellow-50",
+          badge: "bg-yellow-400",
+          border: "border-yellow-300",
+          text: "text-yellow-800",
           label: "Partially Complete",
         };
       default:
@@ -205,7 +205,7 @@ const MCP_Selection = ({ route, navigation }) => {
       <TouchableOpacity
         activeOpacity={0.8}
         onPress={() => handleMCPPress(item)} // Trigger logic on press
-        className={`${config.bg} ${config.border} border border-b border-r mb-5 p-5 rounded-2xl`}
+        className={`${config.bg} ${config.border} border border-b border-r mb-5 p-5 rounded-xl shadow-sm`}
       >
         <View>
           <View className="flex-row items-center justify-between mb-3">
@@ -326,7 +326,7 @@ const MCP_Selection = ({ route, navigation }) => {
             <View className="flex-row items-center bg-slate-50 px-4 py-1 rounded-xl border border-slate-200">
               <Text
                 style={{ fontFamily: "Outfit-SemiBold" }}
-                className="mr-3 text-slate-600"
+                className="mr-3 text-slate-500"
               >
                 Today MCP
               </Text>
@@ -412,7 +412,7 @@ const MCP_Selection = ({ route, navigation }) => {
                   setPickingDate("start");
                   setShowNativePicker(true);
                 }}
-                className={`flex-1 p-4 rounded-2xl border-2 ${pickingDate === "start" ? "border-sky-500 bg-sky-50" : "border-slate-100 bg-slate-50"}`}
+                className={`flex-1 p-4 rounded-xl border ${pickingDate === "start" ? "border-sky-500 bg-sky-50" : "border-slate-200 bg-slate-50"}`}
               >
                 <Text className="text-slate-400 text-[9px] uppercase mb-1">
                   Start Date
@@ -429,7 +429,7 @@ const MCP_Selection = ({ route, navigation }) => {
                   setPickingDate("end");
                   setShowNativePicker(true);
                 }}
-                className={`flex-1 p-4 rounded-2xl border-2 ${pickingDate === "end" ? "border-sky-500 bg-sky-50" : "border-slate-100 bg-slate-50"}`}
+                className={`flex-1 p-4 rounded-xl border ${pickingDate === "end" ? "border-sky-500 bg-sky-50" : "border-slate-200 bg-slate-50"}`}
               >
                 <Text className="text-slate-400 text-[9px] uppercase mb-1">
                   End Date
@@ -448,7 +448,7 @@ const MCP_Selection = ({ route, navigation }) => {
                   setIsFilterActive(false);
                   setShowModal(false);
                 }}
-                className="flex-1 bg-slate-100 py-4 rounded-2xl"
+                className="flex-1 bg-slate-50 py-4 border border-slate-200 rounded-xl"
               >
                 <Text
                   style={{ fontFamily: "Outfit-Bold" }}
@@ -463,7 +463,7 @@ const MCP_Selection = ({ route, navigation }) => {
                   setIsTodayOnly(false);
                   setShowModal(false);
                 }}
-                className="flex-2 grow-[2] bg-sky-600 py-4 rounded-2xl shadow-md"
+                className="flex-2 grow-[2] bg-sky-600 py-4 rounded-xl"
               >
                 <Text
                   style={{ fontFamily: "Outfit-Bold" }}
@@ -524,7 +524,7 @@ const MCP_Selection = ({ route, navigation }) => {
                       visitType: "mcp",
                     });
                   }}
-                  className="flex-row items-center p-4 mb-3 bg-slate-50 rounded-2xl border border-slate-100"
+                  className="flex-row items-center p-4 mb-3 bg-slate-50 rounded-xl border border-slate-200"
                 >
                   <Text
                     style={{ fontFamily: "Outfit-Medium" }}
@@ -538,7 +538,7 @@ const MCP_Selection = ({ route, navigation }) => {
             </View>
             <TouchableOpacity
               onPress={() => setShowDiversionModal(false)}
-              className="bg-slate-100 py-4 rounded-2xl"
+              className="bg-slate-50 py-4 rounded-xl border border-slate-200"
             >
               <Text
                 style={{ fontFamily: "Outfit-Bold" }}

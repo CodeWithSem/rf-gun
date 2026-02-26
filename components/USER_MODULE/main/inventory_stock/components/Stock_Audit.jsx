@@ -22,6 +22,7 @@ import {
   Package,
   ClipboardCheck,
   Save,
+  PackageX,
 } from "lucide-react-native";
 
 // API IMPORTS
@@ -37,32 +38,32 @@ const MASTER_PRODUCTS = [
     id: "1",
     name: "Coke Regular 1.5L",
     sku: "CK-001",
-    backroom: "0",
-    selling: "0",
+    backroom: null,
+    selling: null,
     category: "Sodas",
   },
   {
     id: "2",
     name: "Sprite 500ml",
     sku: "SP-002",
-    backroom: "0",
-    selling: "0",
+    backroom: null,
+    selling: null,
     category: "Sodas",
   },
   {
     id: "3",
     name: "Lay's Classic XL",
     sku: "LY-003",
-    backroom: "0",
-    selling: "0",
+    backroom: null,
+    selling: null,
     category: "Snacks",
   },
   {
     id: "4",
     name: "Pringles Sour Cream",
     sku: "PR-004",
-    backroom: "0",
-    selling: "0",
+    backroom: null,
+    selling: null,
     category: "Snacks",
   },
 ];
@@ -162,13 +163,13 @@ const Stock_Audit = ({ navigation, route }) => {
   const renderProduct = ({ item }) => {
     // Logic for green indication
     const isAudited =
-      item.audited || item.backroom !== "0" || item.selling !== "0";
+      item.audited || item.backroom !== null || item.selling !== null;
 
     return (
       <TouchableOpacity
         activeOpacity={0.7}
         onPress={() => openAuditModal(item)}
-        className={`bg-white p-5 rounded-2xl mb-3 border ${
+        className={`bg-white p-5 rounded-xl mb-4 border border-slate-200 ${
           isAudited ? "border-green-500" : "border-slate-200"
         }`}
       >
@@ -191,7 +192,7 @@ const Stock_Audit = ({ navigation, route }) => {
               style={{ fontFamily: "Outfit-Regular" }}
               className="text-slate-400 text-[10px] uppercase tracking-tighter"
             >
-              SKU: {item.sku}
+              {item.sku}
             </Text>
           </View>
 
@@ -310,6 +311,17 @@ const Stock_Audit = ({ navigation, route }) => {
         )}
         className="bg-slate-50"
         renderItem={renderProduct}
+        ListEmptyComponent={() => (
+          <View className="items-center justify-center mt-20">
+            <PackageX size={48} color="#cbd5e1" />
+            <Text
+              style={{ fontFamily: "Outfit-Regular" }}
+              className="text-slate-400 mt-4"
+            >
+              No stock audit yet.
+            </Text>
+          </View>
+        )}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{
           paddingHorizontal: 24,
@@ -375,7 +387,7 @@ const Stock_Audit = ({ navigation, route }) => {
                   value={tempBackroom}
                   onChangeText={setTempBackroom}
                   placeholder="0"
-                  className="bg-slate-50 border border-slate-200 rounded-2xl p-5 font-[Outfit-Bold] text-2xl text-slate-900"
+                  className="bg-slate-50 border border-slate-200 rounded-xl p-5 font-[Outfit-Bold] text-2xl text-slate-900"
                 />
               </View>
 
@@ -394,14 +406,14 @@ const Stock_Audit = ({ navigation, route }) => {
                   value={tempSelling}
                   onChangeText={setTempSelling}
                   placeholder="0"
-                  className="bg-sky-50 border border-sky-100 rounded-2xl p-5 font-[Outfit-Bold] text-2xl text-sky-900"
+                  className="bg-sky-50 border border-sky-100 rounded-xl p-5 font-[Outfit-Bold] text-2xl text-sky-900"
                 />
               </View>
             </View>
 
             <TouchableOpacity
               onPress={handleSaveModalData}
-              className="bg-sky-600 w-full py-5 rounded-2xl items-center"
+              className="bg-sky-600 w-full py-5 rounded-xl items-center"
             >
               <Text
                 style={{ fontFamily: "Outfit-Bold" }}
@@ -486,7 +498,7 @@ const Stock_Audit = ({ navigation, route }) => {
                 setNotifVisible(false);
                 if (notifType === "submitted") navigation.goBack();
               }}
-              className={`w-full py-4 rounded-2xl items-center ${notifType === "submitted" ? "bg-green-600" : "bg-sky-600"}`}
+              className={`w-full py-4 rounded-xl items-center ${notifType === "submitted" ? "bg-green-600" : "bg-sky-600"}`}
             >
               <Text
                 style={{ fontFamily: "Outfit-Bold" }}

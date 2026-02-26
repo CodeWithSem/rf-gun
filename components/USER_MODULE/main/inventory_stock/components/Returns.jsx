@@ -147,7 +147,7 @@ const Returns = ({ navigation, route }) => {
 
       {/* SEARCH */}
       <View className="px-6 py-4 bg-white border-b border-slate-200">
-        <View className="bg-slate-50 flex-row items-center px-4 rounded-lg border border-slate-200 shadow-sm">
+        <View className="bg-slate-50 flex-row items-center px-4 rounded-lg border border-slate-200">
           <Search size={20} color="#94a3b8" />
           <TextInput
             placeholder="Search documented returns..."
@@ -167,7 +167,7 @@ const Returns = ({ navigation, route }) => {
           contentContainerStyle={{ padding: 24, paddingBottom: 120 }}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <View className="bg-white p-4 rounded-xl mb-4 border border-slate-200 flex-row items-center shadow-sm">
+            <View className="bg-white p-4 rounded-xl mb-4 border border-slate-200 flex-row items-center">
               <View className="w-16 h-16 bg-slate-100 rounded-lg overflow-hidden mr-4 items-center justify-center border border-slate-100">
                 {item.image ? (
                   <Image
@@ -244,7 +244,7 @@ const Returns = ({ navigation, route }) => {
 
             <TouchableOpacity
               onPress={() => handleCloudAction(true)}
-              className="flex-[1.5] bg-red-600 py-4 rounded-xl items-center justify-center flex-row shadow-sm"
+              className="flex-[1.5] bg-red-600 py-4 rounded-xl items-center justify-center flex-row"
             >
               <CheckCircle2 size={18} color="white" />
               <Text
@@ -271,6 +271,7 @@ const Returns = ({ navigation, route }) => {
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           className="flex-1"
+          enabled
         >
           <View className="flex-1 bg-slate-900/50 justify-end">
             <View className="bg-white rounded-t-[40px] p-8 shadow-2xl h-[85%]">
