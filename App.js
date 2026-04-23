@@ -1,51 +1,60 @@
 import React, { useEffect, useState } from "react";
+import { View, Text, TouchableOpacity, Linking } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { StatusBar } from "expo-status-bar";
 import * as Font from "expo-font";
+import { AlertTriangle, Download } from "lucide-react-native";
+
+// FIREBASE REALTIME DB
+import { ref, onValue } from "firebase/database";
+import { realtime_db } from "@assets/scripts/firebase";
 
 // Import your custom CSS for NativeWind
 import "./global.css";
 
 // Components
 import Login from "./components/AUTHENTICATION/Login";
-import Register from "./components/AUTHENTICATION/Register";
 import Dashboard from "./components/USER_MODULE/dashboard/Dashboard";
-import MCP_Selection from "./components/USER_MODULE/mcp_selection/MCP_Selection";
-import Capture_Store_Image from "./components/USER_MODULE/capture_store_image/Capture_Store_Image";
-import Main from "./components/USER_MODULE/main/Main";
-import Inventory_Stock from "./components/USER_MODULE/main/inventory_stock/Inventory_Stock";
-import Stock_Audit from "./components/USER_MODULE/main/inventory_stock/components/Stock_Audit";
-import OSA from "./components/USER_MODULE/main/inventory_stock/components/OSA";
-import Expiry_Tracking from "./components/USER_MODULE/main/inventory_stock/components/Expiry_Tracking";
-import Returns from "./components/USER_MODULE/main/inventory_stock/components/Returns";
-import Share_Of_Shelf from "./components/USER_MODULE/main/share_of_shelf/Share_Of_Shelf";
-import Linear_Meter from "./components/USER_MODULE/main/share_of_shelf/components/Linear_Meter";
-import SOS_Percent from "./components/USER_MODULE/main/share_of_shelf/components/SOS_Percent";
-import Competitor_Track from "./components/USER_MODULE/main/share_of_shelf/components/Competitor_Track";
-import Planogram_Comp from "./components/USER_MODULE/main/share_of_shelf/components/Planogram_Comp";
-import Planogram_Select from "./components/USER_MODULE/main/share_of_shelf/components/Planogram_Select";
-import Pricing_Promo from "./components/USER_MODULE/main/pricing_promo/Pricing_Promo";
-import Price_Audit from "./components/USER_MODULE/main/pricing_promo/components/Price_Audit";
-import Promo_Comp from "./components/USER_MODULE/main/pricing_promo/components/Promo_Comp";
-import Activation_Check from "./components/USER_MODULE/main/pricing_promo/components/Activation_Check";
-import POSM_Audit from "./components/USER_MODULE/main/pricing_promo/components/POSM_Audit";
-import Ordering from "./components/USER_MODULE/main/ordering/Ordering";
-import Suggested_Order from "./components/USER_MODULE/main/ordering/components/Suggested_Order";
-import Delivery_Track from "./components/USER_MODULE/main/ordering/components/Delivery_Track";
-import Gap_Analysis from "./components/USER_MODULE/main/ordering/components/Gap_Analysis";
-import Store_Insights from "./components/USER_MODULE/main/store_insights/Store_Insights";
-import Person_Feedback from "./components/USER_MODULE/main/store_insights/components/Person_Feedback";
-import SOS_Survey from "./components/USER_MODULE/main/store_insights/components/SOS_Survey";
-import Incident_Report from "./components/USER_MODULE/main/store_insights/components/Incident_Report";
-import Store_Selection from "./components/USER_MODULE/store_selection/Store_Selection";
+import Transfer_Order from "./components/USER_MODULE/transfer_order/Transfer_Order";
+import TO_Process from "./components/USER_MODULE/transfer_order/TO_Process";
+import User_Direct from "./components/USER_MODULE/user_direct/User_Direct";
+import LPN_Transfer from "./components/USER_MODULE/user_direct/LPN_Transfer";
 
 const Stack = createNativeStackNavigator();
 
 export default function App() {
   const [fontsLoaded, setFontsLoaded] = useState(false);
+  const [is_app_active, set_is_app_active] = useState(true);
+  const [checking_version, set_checking_version] = useState(true);
   const app_version = "v 1.0.0";
+  const app_version_rtdb = "1-0-0";
+
+  // REALTIME DATABASE VERSION CHECK
+  useEffect(() => {
+    // Path: DB1_ERP_SYSTEM/APP_VERSION/1-0-0/VALUE
+    const version_ref = ref(
+      realtime_db,
+      `DB1_ERP_SYSTEM/APP_VERSION/${app_version_rtdb}/VALUE`,
+    );
+
+    const unsubscribe = onValue(
+      version_ref,
+      (snapshot) => {
+        const data = snapshot.val();
+        // Kung ang data ay explicit na 'false', i-lock ang app.
+        set_is_app_active(data === false ? false : true);
+        set_checking_version(false);
+      },
+      (error) => {
+        console.warn("RTDB Version Check Error:", error);
+        set_checking_version(false);
+      },
+    );
+
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     async function loadFonts() {
@@ -70,7 +79,55 @@ export default function App() {
     loadFonts();
   }, []);
 
-  if (!fontsLoaded) return null;
+  if (!fontsLoaded || checking_version) return null;
+
+  // OUTDATED VERSION SCREEN
+  if (!is_app_active) {
+    return (
+      <View className="flex-1 bg-white justify-center items-center px-10">
+        <View className="bg-red-50 p-8 rounded-full mb-6">
+          <AlertTriangle size={64} color="#ef4444" />
+        </View>
+        <Text
+          style={{ fontFamily: "Outfit-Bold" }}
+          className="text-2xl text-slate-900 text-center"
+        >
+          App Version Outdated
+        </Text>
+        <Text
+          style={{ fontFamily: "Outfit-Regular" }}
+          className="text-slate-500 text-center mt-3 mb-10 leading-6"
+        >
+          The version you are currently using ({app_version}) is no longer
+          supported. Please download the latest APK to continue.
+        </Text>
+
+        <TouchableOpacity
+          onPress={() =>
+            Linking.openURL(
+              "https://drive.google.com/drive/folders/1Xj8RjG1o_DiF8H__wLNFjgl-NMs-JXUf?usp=sharing",
+            )
+          }
+          className="bg-slate-900 w-full py-5 rounded-2xl flex-row justify-center items-center"
+        >
+          <Download size={20} color="white" />
+          <Text
+            style={{ fontFamily: "Outfit-Bold" }}
+            className="text-white text-lg ml-2"
+          >
+            Download New APK
+          </Text>
+        </TouchableOpacity>
+
+        <Text
+          style={{ fontFamily: "Outfit-Medium" }}
+          className="text-slate-400 mt-8 text-[10px] uppercase tracking-[1px]"
+        >
+          Build Version: {app_version}
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <SafeAreaProvider>
@@ -84,55 +141,15 @@ export default function App() {
               animation: "fade",
             }}
           >
-            {/* Login Screen */}
             <Stack.Screen name="Login">
               {(props) => <Login {...props} app_version={app_version} />}
             </Stack.Screen>
 
-            {/* Register Screen */}
-            <Stack.Screen name="Register" component={Register} />
-
-            {/* Dashboard Screen */}
-            <Stack.Screen name="Dashboard" component={Dashboard} />
-            {/* MCP Selection Screen */}
-            <Stack.Screen name="MCPSelection" component={MCP_Selection} />
-            {/* Store Selection Screen */}
-            <Stack.Screen name="StoreSelection" component={Store_Selection} />
-            <Stack.Screen
-              name="CaptureStoreImage"
-              component={Capture_Store_Image}
-            />
-            {/* Main Page */}
-            <Stack.Screen name="Main" component={Main} />
-            {/* Inventory & Stock */}
-            <Stack.Screen name="InventoryStock" component={Inventory_Stock} />
-            <Stack.Screen name="StockAudit" component={Stock_Audit} />
-            <Stack.Screen name="OSA" component={OSA} />
-            <Stack.Screen name="ExpiryTracking" component={Expiry_Tracking} />
-            <Stack.Screen name="Returns" component={Returns} />
-            {/* Share of Shelf */}
-            <Stack.Screen name="SOS" component={Share_Of_Shelf} />
-            <Stack.Screen name="LinearMeter" component={Linear_Meter} />
-            <Stack.Screen name="SOSPercent" component={SOS_Percent} />
-            <Stack.Screen name="CompetitorTrack" component={Competitor_Track} />
-            <Stack.Screen name="PlanogramComp" component={Planogram_Comp} />
-            <Stack.Screen name="PlanogramSelect" component={Planogram_Select} />
-            {/* Pricing & Promos */}
-            <Stack.Screen name="PricingPromo" component={Pricing_Promo} />
-            <Stack.Screen name="PriceAudit" component={Price_Audit} />
-            <Stack.Screen name="PromoComp" component={Promo_Comp} />
-            <Stack.Screen name="ActivationCheck" component={Activation_Check} />
-            <Stack.Screen name="POSMAudit" component={POSM_Audit} />
-            {/* Ordering */}
-            <Stack.Screen name="Ordering" component={Ordering} />
-            <Stack.Screen name="SuggestedOrder" component={Suggested_Order} />
-            <Stack.Screen name="DeliveryTrack" component={Delivery_Track} />
-            <Stack.Screen name="GapAnalysis" component={Gap_Analysis} />
-            {/* Store Insights */}
-            <Stack.Screen name="StoreInsights" component={Store_Insights} />
-            <Stack.Screen name="PersonFeedback" component={Person_Feedback} />
-            <Stack.Screen name="SOSSurvey" component={SOS_Survey} />
-            <Stack.Screen name="IncidentReport" component={Incident_Report} />
+            <Stack.Screen name="dashboard" component={Dashboard} />
+            <Stack.Screen name="transfer_order" component={Transfer_Order} />
+            <Stack.Screen name="to_process" component={TO_Process} />
+            <Stack.Screen name="user_direct" component={User_Direct} />
+            <Stack.Screen name="lpn_transfer" component={LPN_Transfer} />
           </Stack.Navigator>
         </SafeAreaView>
       </NavigationContainer>

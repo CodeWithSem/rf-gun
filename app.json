@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Delphys 7 Merch App",
-    "slug": "merch-app",
+    "name": "RF Gun App",
+    "slug": "rf-gun",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/delphys7-icon.png",
@@ -26,15 +26,16 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": false,
-      "package": "com.qsitdev.merchapp"
+      "package": "com.qsitdev.rfgun"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "extra": {
       "eas": {
-        "projectId": "66d9f374-14b7-4f2c-ac7f-ead770246cfa"
+        "projectId": "ac752140-78c5-4ed5-bf53-c21b22f75017"
       }
-    }
+    },
+    "owner": "qsitdev"
   }
 }
