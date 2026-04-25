@@ -136,7 +136,10 @@ const TO_Process = ({ route, navigation }) => {
         set_manual_lpn("");
       }
     } else {
-      Alert.alert("Invalid LPN", `LPN ${trimmed_val} is not part of this TO.`);
+      Alert.alert(
+        "Invalid LPN",
+        `LPN ${trimmed_val} is not part of this Transfer Order.`,
+      );
     }
     set_scanned_value("");
   };
@@ -478,15 +481,61 @@ const TO_Process = ({ route, navigation }) => {
     set_manual_lpn(text);
   };
 
+  const typingTimeoutRef = useRef(null);
+  const binTypingTimeoutRef = useRef(null);
+
+  const handle_text_change = (text) => {
+    set_scanned_value(text);
+
+    // I-clear ang previous timeout tuwing may bagong character
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+
+    // Mag-antay ng 300ms (adjust base sa bilis ng gun) bago i-process
+    typingTimeoutRef.current = setTimeout(() => {
+      if (text.length > 0) {
+        handle_scan(text);
+      }
+    }, 300);
+  };
+
+  const handle_bin_change = (text) => {
+    set_bin_input_value(text);
+
+    // I-clear ang previous timer para mag-restart ang count sa bawat character
+    if (binTypingTimeoutRef.current) {
+      clearTimeout(binTypingTimeoutRef.current);
+    }
+
+    // Mag-set ng delay (halimbawa 300ms)
+    binTypingTimeoutRef.current = setTimeout(() => {
+      if (text.trim().length > 0) {
+        validate_and_drop(text);
+      }
+    }, 300);
+  };
+
   // RETURN ORIGIN
   return (
     <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
       {/* HIDDEN SCANNER INPUT */}
-      <TextInput
+      {/* <TextInput
         ref={scanner_input_ref}
         value={scanned_value}
         onChangeText={set_scanned_value}
         onSubmitEditing={() => handle_scan(scanned_value)}
+        autoFocus={true}
+        showSoftInputOnFocus={false}
+        style={{ position: "absolute", opacity: 0, height: 0, width: 0 }}
+      /> */}
+      <TextInput
+        ref={scanner_input_ref}
+        value={scanned_value}
+        onChangeText={handle_text_change} // Palitan ito
+        // onSubmitEditing={() => {
+        //   if (scanned_value.length > 5) handle_scan(scanned_value);
+        // }}
         autoFocus={true}
         showSoftInputOnFocus={false}
         style={{ position: "absolute", opacity: 0, height: 0, width: 0 }}
@@ -696,11 +745,26 @@ const TO_Process = ({ route, navigation }) => {
           <View className="bg-white rounded-t-[40px] p-8 pb-12 shadow-2xl">
             {/* Hidden Input for Scanner Gun */}
             {!is_manual_bin && (
+              // <TextInput
+              //   ref={bin_scanner_ref}
+              //   value={bin_input_value}
+              //   onChangeText={set_bin_input_value}
+              //   onSubmitEditing={() => validate_and_drop(bin_input_value)}
+              //   autoFocus={true}
+              //   showSoftInputOnFocus={false}
+              //   style={{ position: "absolute", opacity: 0 }}
+              // />
               <TextInput
                 ref={bin_scanner_ref}
                 value={bin_input_value}
-                onChangeText={set_bin_input_value}
-                onSubmitEditing={() => validate_and_drop(bin_input_value)}
+                onChangeText={handle_bin_change} // Gamitin ang bagong function dito
+                // onSubmitEditing={() => {
+                //   if (binTypingTimeoutRef.current)
+                //     clearTimeout(binTypingTimeoutRef.current);
+                //   if (bin_input_value.trim().length > 0) {
+                //     validate_and_drop(bin_input_value);
+                //   }
+                // }}
                 autoFocus={true}
                 showSoftInputOnFocus={false}
                 style={{ position: "absolute", opacity: 0 }}

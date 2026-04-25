@@ -43,29 +43,37 @@ const Dashboard = ({ route, navigation }) => {
       borderColor: "border-sky-100",
     },
     {
-      id: "inventory",
-      name: "Inventory Control",
-      desc: "Cycle count & stock check",
+      id: "lpn_allocation",
+      name: "LPN Allocation",
+      desc: "Assign LPNs",
       icon: <PackageCheck size={24} color="#0284c7" />,
       color: "bg-sky-50",
       borderColor: "border-sky-100",
     },
-    {
-      id: "picking",
-      name: "Picking",
-      desc: "Order fulfillment",
-      icon: <PackageSearch size={24} color="#0284c7" />,
-      color: "bg-sky-50",
-      borderColor: "border-sky-100",
-    },
-    {
-      id: "dispatch",
-      name: "Dispatch",
-      desc: "Loading & shipping",
-      icon: <Truck size={24} color="#0284c7" />,
-      color: "bg-sky-50",
-      borderColor: "border-sky-100",
-    },
+    // {
+    //   id: "inventory",
+    //   name: "Inventory Control",
+    //   desc: "Cycle count & stock check",
+    //   icon: <PackageCheck size={24} color="#0284c7" />,
+    //   color: "bg-sky-50",
+    //   borderColor: "border-sky-100",
+    // },
+    // {
+    //   id: "picking",
+    //   name: "Picking",
+    //   desc: "Order fulfillment",
+    //   icon: <PackageSearch size={24} color="#0284c7" />,
+    //   color: "bg-sky-50",
+    //   borderColor: "border-sky-100",
+    // },
+    // {
+    //   id: "dispatch",
+    //   name: "Dispatch",
+    //   desc: "Loading & shipping",
+    //   icon: <Truck size={24} color="#0284c7" />,
+    //   color: "bg-sky-50",
+    //   borderColor: "border-sky-100",
+    // },
   ];
 
   const handleLogout = () => {
@@ -77,6 +85,8 @@ const Dashboard = ({ route, navigation }) => {
     if (module_id === "transfer_order") {
       navigation.navigate(module_id, { user_data: user });
     } else if (module_id === "user_direct") {
+      navigation.navigate(module_id, { user_data: user });
+    } else if (module_id === "lpn_allocation") {
       navigation.navigate(module_id, { user_data: user });
     } else {
       // Custom Alert style could be added later

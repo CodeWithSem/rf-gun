@@ -18,9 +18,11 @@ import "./global.css";
 import Login from "./components/AUTHENTICATION/Login";
 import Dashboard from "./components/USER_MODULE/dashboard/Dashboard";
 import Transfer_Order from "./components/USER_MODULE/transfer_order/Transfer_Order";
+import LPN_Allocation from "./components/USER_MODULE/lpn_allocation/LPN_Allocation";
 import TO_Process from "./components/USER_MODULE/transfer_order/TO_Process";
 import User_Direct from "./components/USER_MODULE/user_direct/User_Direct";
 import LPN_Transfer from "./components/USER_MODULE/user_direct/LPN_Transfer";
+import LPN_Form from "./components/USER_MODULE/lpn_allocation/LPN_Form";
 
 const Stack = createNativeStackNavigator();
 
@@ -147,6 +149,8 @@ export default function App() {
 
             <Stack.Screen name="dashboard" component={Dashboard} />
             <Stack.Screen name="transfer_order" component={Transfer_Order} />
+            <Stack.Screen name="lpn_allocation" component={LPN_Allocation} />
+            <Stack.Screen name="lpn_form" component={LPN_Form} />
             <Stack.Screen name="to_process" component={TO_Process} />
             <Stack.Screen name="user_direct" component={User_Direct} />
             <Stack.Screen name="lpn_transfer" component={LPN_Transfer} />
