@@ -23,6 +23,8 @@ import TO_Process from "./components/USER_MODULE/transfer_order/TO_Process";
 import User_Direct from "./components/USER_MODULE/user_direct/User_Direct";
 import LPN_Transfer from "./components/USER_MODULE/user_direct/LPN_Transfer";
 import LPN_Form from "./components/USER_MODULE/lpn_allocation/LPN_Form";
+import LPN_Update from "./components/USER_MODULE/lpn_allocation/LPN_Update";
+import LPN_Search from "./components/USER_MODULE/lpn_allocation/LPN_Search";
 
 const Stack = createNativeStackNavigator();
 
@@ -150,7 +152,9 @@ export default function App() {
             <Stack.Screen name="dashboard" component={Dashboard} />
             <Stack.Screen name="transfer_order" component={Transfer_Order} />
             <Stack.Screen name="lpn_allocation" component={LPN_Allocation} />
+            <Stack.Screen name="lpn_search" component={LPN_Search} />
             <Stack.Screen name="lpn_form" component={LPN_Form} />
+            <Stack.Screen name="lpn_update" component={LPN_Update} />
             <Stack.Screen name="to_process" component={TO_Process} />
             <Stack.Screen name="user_direct" component={User_Direct} />
             <Stack.Screen name="lpn_transfer" component={LPN_Transfer} />

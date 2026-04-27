@@ -152,7 +152,7 @@ const LPN_Form = ({ navigation, route }) => {
         </TouchableOpacity>
         <View className="ml-2 flex-1">
           <Text style={{ fontFamily: "Outfit-Bold" }} className="text-xl">
-            Scan LPN
+            Register New LPN
           </Text>
           <Text className="text-slate-500 text-xs">
             Ready to capture QR code data
@@ -170,7 +170,7 @@ const LPN_Form = ({ navigation, route }) => {
           style={{ fontFamily: "Outfit-Bold" }}
           className="text-2xl text-slate-900"
         >
-          Ready to Scan
+          READY TO SCAN
         </Text>
         <Text
           style={{ fontFamily: "Outfit-Regular" }}
