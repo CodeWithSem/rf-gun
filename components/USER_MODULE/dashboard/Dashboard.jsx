@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,9 @@ import {
   TouchableOpacity,
   Modal,
   StatusBar,
+  Vibration,
+  Alert,
+  TextInput,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -19,10 +22,30 @@ import {
   ClipboardList,
   PackageSearch,
 } from "lucide-react-native";
+import { useIsFocused } from "@react-navigation/native";
 
 const Dashboard = ({ route, navigation }) => {
   const { user } = route.params;
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const isFocused = useIsFocused();
+  const dummyInputRef = useRef(null);
+
+  useEffect(() => {
+    let focusTimer;
+
+    if (isFocused) {
+      // Nilalagyan ng maikling delay para siguradong tapos na ang screen transition
+      focusTimer = setTimeout(() => {
+        dummyInputRef.current?.focus();
+      }, 300);
+    } else {
+      dummyInputRef.current?.blur();
+    }
+
+    return () => {
+      if (focusTimer) clearTimeout(focusTimer);
+    };
+  }, [isFocused]);
 
   // Updated modules with unique colors and icons
   const modules = [
@@ -92,6 +115,30 @@ const Dashboard = ({ route, navigation }) => {
       // Custom Alert style could be added later
       alert("Under Maintenance: This module will be available soon.");
     }
+  };
+
+  const [is_alerting, set_is_alerting] = useState(false);
+
+  const handle_stray_scan = (text) => {
+    // Kung wala pang text o may alert na nakabukas, huwag gawin ang logic
+    if (!text || is_alerting) return;
+
+    // I-set ang flag na "may alert na"
+    set_is_alerting(true);
+    Vibration.vibrate(50);
+
+    Alert.alert("Invalid Action", "Please select a menu before scanning.", [
+      {
+        text: "OK",
+        onPress: () => {
+          dummyInputRef.current?.clear();
+          // I-reset ang flag pagkapindot ng OK
+          set_is_alerting(false);
+          // I-focus ulit para sa susunod na scan
+          setTimeout(() => dummyInputRef.current?.focus(), 100);
+        },
+      },
+    ]);
   };
 
   return (
@@ -231,6 +278,17 @@ const Dashboard = ({ route, navigation }) => {
           </View>
         </View>
       </Modal>
+      <TextInput
+        ref={dummyInputRef}
+        showSoftInputOnFocus={false}
+        style={{ opacity: 0, height: 0, position: "absolute" }}
+        value=""
+        // Sa halip na onChangeText, dito natin ilalagay:
+        onSubmitEditing={(e) => {
+          handle_stray_scan(e.nativeEvent.text);
+        }}
+        blurOnSubmit={false}
+      />
     </SafeAreaView>
   );
 };

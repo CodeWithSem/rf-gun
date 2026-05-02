@@ -13,7 +13,7 @@ import {
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ChevronLeft, QrCode, Barcode } from "lucide-react-native";
+import { ChevronLeft, QrCode, Barcode, PlusCircle } from "lucide-react-native";
 
 // ASSETS & CONFIG
 import { firestore_db } from "@assets/scripts/firebase";
@@ -53,6 +53,16 @@ const LPN_Form = ({ navigation, route }) => {
   const handle_qr_scan = (qr_text) => {
     if (!qr_text) return;
     const clean_id = qr_text.trim();
+    // VALIDATION: Check if length is at least 14 characters
+    if (clean_id.length < 14) {
+      Vibration.vibrate([100, 50, 100]); // Error vibration pattern
+      Alert.alert(
+        "Invalid LPN",
+        "The LPN ID must be at least 14 characters long.",
+      );
+      set_scanned_value("");
+      return;
+    }
     Vibration.vibrate(50);
     set_current_lpn_id(clean_id);
     set_is_modal_visible(true);
@@ -130,7 +140,7 @@ const LPN_Form = ({ navigation, route }) => {
         </View>
       )}
 
-      <TextInput
+      {/* <TextInput
         ref={scanner_input_ref}
         value={scanned_value}
         onChangeText={(text) => {
@@ -138,11 +148,25 @@ const LPN_Form = ({ navigation, route }) => {
           if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
           typingTimeoutRef.current = setTimeout(
             () => text && handle_qr_scan(text),
-            300,
+            700,
           );
         }}
         showSoftInputOnFocus={false}
         style={{ opacity: 0, height: 0 }}
+      /> */}
+      <TextInput
+        ref={scanner_input_ref}
+        showSoftInputOnFocus={false}
+        style={{ opacity: 0, height: 0, position: "absolute" }}
+        onSubmitEditing={(e) => {
+          const code = e.nativeEvent.text;
+          if (code) {
+            handle_qr_scan(code);
+            scanner_input_ref.current?.clear();
+          }
+        }}
+        blurOnSubmit={false}
+        autoFocus={true}
       />
 
       {/* HEADER */}
@@ -158,13 +182,13 @@ const LPN_Form = ({ navigation, route }) => {
             Ready to capture QR code data
           </Text>
         </View>
-        <QrCode size={24} color="#0284c7" />
+        <PlusCircle size={24} color="#10b981" />
       </View>
 
       {/* MAIN VIEW */}
       <View className="flex-1 justify-center items-center px-10 bg-slate-50">
-        <View className="bg-white p-10 rounded-full shadow-sm mb-6">
-          <Barcode size={100} color="#0284c7" />
+        <View className="bg-emerald-100 border-2 border-emerald-500 p-10 rounded-full shadow-sm mb-6">
+          <Barcode size={100} color="#10b981" />
         </View>
         <Text
           style={{ fontFamily: "Outfit-Bold" }}
@@ -197,7 +221,7 @@ const LPN_Form = ({ navigation, route }) => {
                   >
                     LPN Details
                   </Text>
-                  <Text className="text-sky-600 text-xs font-bold mt-1 uppercase tracking-widest">
+                  <Text className="text-emerald-600 text-xs font-bold mt-1 uppercase tracking-widest">
                     ID: {current_lpn_id}
                   </Text>
                 </View>
@@ -285,7 +309,7 @@ const LPN_Form = ({ navigation, route }) => {
                 <TouchableOpacity
                   onPress={handle_save_lpn}
                   activeOpacity={0.8}
-                  className="bg-sky-600 py-5 rounded-2xl items-center shadow-lg"
+                  className="bg-emerald-600 py-5 rounded-2xl items-center shadow-lg"
                 >
                   <Text
                     style={{ fontFamily: "Outfit-Bold" }}

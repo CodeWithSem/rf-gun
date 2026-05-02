@@ -86,7 +86,7 @@ const LPN_Search = ({ navigation }) => {
       )}
 
       {/* HIDDEN SCANNER INPUT */}
-      <TextInput
+      {/* <TextInput
         ref={scanner_input_ref}
         value={scanned_value}
         onChangeText={(text) => {
@@ -99,6 +99,21 @@ const LPN_Search = ({ navigation }) => {
         }}
         showSoftInputOnFocus={false}
         style={{ opacity: 0, height: 0 }}
+      /> */}
+
+      <TextInput
+        ref={scanner_input_ref}
+        showSoftInputOnFocus={false}
+        style={{ opacity: 0, height: 0, position: "absolute" }}
+        onSubmitEditing={(e) => {
+          const code = e.nativeEvent.text;
+          if (code) {
+            handle_search(code);
+            scanner_input_ref.current?.clear();
+          }
+        }}
+        blurOnSubmit={false}
+        autoFocus={true}
       />
 
       {/* HEADER */}
@@ -121,7 +136,7 @@ const LPN_Search = ({ navigation }) => {
         {!lpn_data ? (
           /* EMPTY STATE / WAITING FOR SCAN */
           <View className="flex-1 justify-center items-center px-10">
-            <View className="bg-white p-10 rounded-full shadow-sm mb-6">
+            <View className="bg-sky-100 border-2 border-sky-500 p-10 rounded-full shadow-sm mb-6">
               <Barcode size={100} color="#0284c7" />
             </View>
             <Text

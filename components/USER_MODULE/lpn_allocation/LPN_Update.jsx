@@ -21,6 +21,7 @@ import {
   Warehouse,
   MapPin,
   Layers,
+  RefreshCcw,
 } from "lucide-react-native";
 
 // ASSETS & CONFIG
@@ -174,7 +175,7 @@ const LPN_Update = ({ navigation, route }) => {
         </View>
       )}
 
-      <TextInput
+      {/* <TextInput
         ref={scanner_input_ref}
         value={scanned_value}
         onChangeText={(text) => {
@@ -187,6 +188,21 @@ const LPN_Update = ({ navigation, route }) => {
         }}
         showSoftInputOnFocus={false}
         style={{ opacity: 0, height: 0 }}
+      /> */}
+
+      <TextInput
+        ref={scanner_input_ref}
+        showSoftInputOnFocus={false}
+        style={{ opacity: 0, height: 0, position: "absolute" }}
+        onSubmitEditing={(e) => {
+          const code = e.nativeEvent.text;
+          if (code) {
+            handle_scan(code);
+            scanner_input_ref.current?.clear();
+          }
+        }}
+        blurOnSubmit={false}
+        autoFocus={true}
       />
 
       {/* HEADER */}
@@ -204,14 +220,14 @@ const LPN_Update = ({ navigation, route }) => {
               : "Ready for new sticker"}
           </Text>
         </View>
-        <QrCode size={24} color={step === 1 ? "#0284c7" : "#f97316"} />
+        <RefreshCcw size={24} color="#f97316" />
       </View>
 
       <View className="flex-1 bg-slate-50">
         {step === 1 ? (
           <View className="flex-1 justify-center items-center px-10">
-            <View className="bg-white p-10 rounded-full shadow-sm mb-6">
-              <Barcode size={100} color="#0284c7" />
+            <View className="bg-orange-100 border-2 border-orange-500 p-10 rounded-full shadow-sm mb-6">
+              <Barcode size={100} color="#f97316" />
             </View>
             <Text
               style={{ fontFamily: "Outfit-Bold" }}
@@ -327,7 +343,7 @@ const LPN_Update = ({ navigation, route }) => {
 
             {/* ACTION FOOTER */}
             <View className="px-10 items-center">
-              <View className="bg-orange-50 p-4 rounded-full mb-4">
+              <View className="bg-orange-100 border-2 border-orange-500 p-4 rounded-full mb-4">
                 <Barcode size={40} color="#f97316" />
               </View>
               <Text
@@ -372,11 +388,11 @@ const LPN_Update = ({ navigation, route }) => {
                   </Text>
 
                   <View className="flex-row items-center mt-4 bg-slate-50 py-3 px-4 rounded-2xl border border-slate-100 gap-2">
-                    <Text className="text-slate-400 font-bold text-[11px] tracking-[1px]">
+                    <Text className="text-slate-400 font-bold text-[10px] tracking-[1px]">
                       {old_lpn_data?.lpn_id}
                     </Text>
                     <ArrowRight size={12} color="#94a3b8" className="mx-2" />
-                    <Text className="text-orange-600 font-bold text-[11px] tracking-[1px]">
+                    <Text className="text-orange-600 font-bold text-[10px] tracking-[1px]">
                       {new_lpn_id}
                     </Text>
                   </View>
@@ -436,7 +452,7 @@ const LPN_Update = ({ navigation, route }) => {
                   </View>
                 </View>
 
-                <TouchableOpacity
+                {/* <TouchableOpacity
                   onPress={handle_confirm_replacement}
                   activeOpacity={0.8}
                   className="bg-orange-500 py-5 rounded-2xl items-center shadow-lg mt-8"
@@ -447,6 +463,25 @@ const LPN_Update = ({ navigation, route }) => {
                   >
                     Replace LPN
                   </Text>
+                </TouchableOpacity> */}
+                <TouchableOpacity
+                  onPress={handle_confirm_replacement}
+                  activeOpacity={0.8}
+                  disabled={loading}
+                  className={`${
+                    loading ? "bg-orange-300" : "bg-orange-500"
+                  } py-5 rounded-2xl items-center shadow-lg mt-8`}
+                >
+                  {loading ? (
+                    <ActivityIndicator color="#ffffff" />
+                  ) : (
+                    <Text
+                      style={{ fontFamily: "Outfit-Bold" }}
+                      className="text-white text-lg"
+                    >
+                      Replace LPN
+                    </Text>
+                  )}
                 </TouchableOpacity>
 
                 <TouchableOpacity

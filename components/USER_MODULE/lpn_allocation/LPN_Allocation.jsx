@@ -1,14 +1,44 @@
-import React from "react";
-import { View, Text, TouchableOpacity, ScrollView } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  ScrollView,
+  TextInput,
+  Vibration,
+  Alert,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   ChevronLeft,
   PlusCircle,
   Search,
   RefreshCw,
+  PackageMinus,
+  ShieldCheck,
 } from "lucide-react-native";
+import { useIsFocused } from "@react-navigation/native";
 
 const LPN_Allocation = ({ navigation }) => {
+  const isFocused = useIsFocused();
+  const dummyInputRef = useRef(null);
+
+  useEffect(() => {
+    let focusTimer;
+
+    if (isFocused) {
+      // Nilalagyan ng maikling delay para siguradong tapos na ang screen transition
+      focusTimer = setTimeout(() => {
+        dummyInputRef.current?.focus();
+      }, 300);
+    } else {
+      dummyInputRef.current?.blur();
+    }
+
+    return () => {
+      if (focusTimer) clearTimeout(focusTimer);
+    };
+  }, [isFocused]);
   // Helper component para sa mga Buttons/Cards
   const MenuButton = ({
     title,
@@ -42,6 +72,30 @@ const LPN_Allocation = ({ navigation }) => {
     </TouchableOpacity>
   );
 
+  const [is_alerting, set_is_alerting] = useState(false);
+
+  const handle_stray_scan = (text) => {
+    // Kung wala pang text o may alert na nakabukas, huwag gawin ang logic
+    if (!text || is_alerting) return;
+
+    // I-set ang flag na "may alert na"
+    set_is_alerting(true);
+    Vibration.vibrate(50);
+
+    Alert.alert("Invalid Action", "Please select a menu before scanning.", [
+      {
+        text: "OK",
+        onPress: () => {
+          dummyInputRef.current?.clear();
+          // I-reset ang flag pagkapindot ng OK
+          set_is_alerting(false);
+          // I-focus ulit para sa susunod na scan
+          setTimeout(() => dummyInputRef.current?.focus(), 100);
+        },
+      },
+    ]);
+  };
+
   return (
     <SafeAreaView className="flex-1 bg-slate-50" edges={["top"]}>
       {/* Header */}
@@ -59,7 +113,6 @@ const LPN_Allocation = ({ navigation }) => {
           LPN Allocation
         </Text>
       </View>
-
       <ScrollView showsVerticalScrollIndicator={false} className="flex-1 pt-2">
         {/* Instruction Text */}
         <View className="px-8 mb-6">
@@ -97,14 +150,46 @@ const LPN_Allocation = ({ navigation }) => {
           colorClass="bg-orange-500"
           onPress={() => navigation.navigate("lpn_update")} // Palitan ang name base sa stack name mo
         />
+        {/* 3rd Button: Update LPN */}
+        <MenuButton
+          title="LPN Out"
+          description="Remove current LPN data"
+          icon={PackageMinus}
+          colorClass="bg-red-500"
+          onPress={() => navigation.navigate("lpn_out")} // Palitan ang name base sa stack name mo
+        />
       </ScrollView>
-
       {/* Footer / Version Info (Optional) */}
       <View className="py-6 items-center">
-        <Text className="text-slate-300 text-[10px] uppercase tracking-tighter">
-          Inventory Control System v1.0
-        </Text>
+        <View className="flex-row items-center bg-slate-200/50 px-4 py-1.5 rounded-full">
+          <ShieldCheck size={12} color="#64748b" />
+          <Text
+            style={{ fontFamily: "Outfit-Medium" }}
+            className="text-slate-500 text-[10px] ml-1.5"
+          >
+            Authorized Access Only v 1.0.0
+          </Text>
+        </View>
       </View>
+      {/* <TextInput
+        ref={dummyInputRef}
+        showSoftInputOnFocus={false}
+        // Panatilihing nakatago pero active
+        // style={{ opacity: 0, height: 0, position: 'absolute' }}
+        value=""
+        onChangeText={() => {}}
+      /> */}
+      <TextInput
+        ref={dummyInputRef}
+        showSoftInputOnFocus={false}
+        style={{ opacity: 0, height: 0, position: "absolute" }}
+        value=""
+        // Sa halip na onChangeText, dito natin ilalagay:
+        onSubmitEditing={(e) => {
+          handle_stray_scan(e.nativeEvent.text);
+        }}
+        blurOnSubmit={false}
+      />
     </SafeAreaView>
   );
 };
