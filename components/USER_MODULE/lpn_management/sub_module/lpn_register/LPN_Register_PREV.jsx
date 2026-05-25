@@ -20,10 +20,9 @@ import { firestore_db } from "@assets/scripts/firebase";
 import { doc, setDoc } from "firebase/firestore";
 import { format_date, get_date_now } from "@assets/scripts/functions/format";
 
-const LPN_Form = ({ navigation, route }) => {
+const LPN_Register = ({ navigation, route }) => {
   const { user_data } = route.params || {};
   const scanner_input_ref = useRef(null);
-  const typingTimeoutRef = useRef(null);
 
   const [loading, set_loading] = useState(false);
   const [scanned_value, set_scanned_value] = useState("");
@@ -36,33 +35,49 @@ const LPN_Form = ({ navigation, route }) => {
   const [item_code_input, set_item_code_input] = useState("");
   const [qty_input, set_qty_input] = useState("1");
   const [uom_base, set_uom_base] = useState("");
-  const [qty_in_kg, set_qty_in_kg] = useState("0"); // BAGONG FIELD
+  const [qty_in_kg, set_qty_in_kg] = useState("0");
   const [warehouse_code, set_warehouse_code] = useState("");
   const [sbin_code, set_sbin_code] = useState("");
 
-  // AUTO-FOCUS PARA SA EXTERNAL SCANNER
+  // SMART AUTO-FOCUS CONTROL PARA SA EXTERNAL SCANNER
+  // Humihinto ang interval na ito kapag bukas ang modal para maiwasan ang GBoard crashes.
   useEffect(() => {
-    const focus_interval = setInterval(() => {
-      if (!is_modal_visible) {
+    let focus_interval = null;
+
+    if (!is_modal_visible) {
+      // Agarang i-focus pagka-load o pagkasara ng modal
+      scanner_input_ref.current?.focus();
+
+      // Loop interval para laging saluhin ng input ang hardware laser scans
+      focus_interval = setInterval(() => {
         scanner_input_ref.current?.focus();
-      }
-    }, 1000);
-    return () => clearInterval(focus_interval);
-  }, [is_modal_visible]);
+      }, 1000);
+    }
+
+    return () => {
+      if (focus_interval) clearInterval(focus_interval);
+    };
+  }, [is_modal_visible]); // Tinitiyak na magre-run tuwing magbabago ang modal state
 
   const handle_qr_scan = (qr_text) => {
     if (!qr_text) return;
+
     const clean_id = qr_text.trim();
-    // VALIDATION: Check if length is at least 14 characters
-    if (clean_id.length < 14) {
-      Vibration.vibrate([100, 50, 100]); // Error vibration pattern
-      Alert.alert(
-        "Invalid LPN",
-        "The LPN ID must be at least 14 characters long.",
-      );
+
+    // VALIDATION: Check if length is at least 14 chars AND contains a dash
+    if (clean_id.length < 14 || !clean_id.includes("-")) {
+      Vibration.vibrate([100, 50, 100]);
+
+      let error_message = "The LPN ID must be at least 14 characters long.";
+      if (!clean_id.includes("-")) {
+        error_message = "Invalid format: LPN ID must contain a dash.";
+      }
+
+      Alert.alert("Invalid LPN", error_message);
       set_scanned_value("");
       return;
     }
+
     Vibration.vibrate(50);
     set_current_lpn_id(clean_id);
     set_is_modal_visible(true);
@@ -70,7 +85,6 @@ const LPN_Form = ({ navigation, route }) => {
   };
 
   const handle_save_lpn = async () => {
-    // Kasama na sa validation ang qty_in_kg
     if (
       !item_code_input ||
       !sbin_code ||
@@ -100,7 +114,7 @@ const LPN_Form = ({ navigation, route }) => {
         plant_code: "PL01",
         po_number: "",
         qty_base: Number(qty_input),
-        qty_in_kg: Number(qty_in_kg), // NA-SAVE NA DITO
+        qty_in_kg: Number(qty_in_kg),
         sbin_code: String(sbin_code).toUpperCase(),
         sloc_code: "",
         stype_code: "BULK",
@@ -140,20 +154,7 @@ const LPN_Form = ({ navigation, route }) => {
         </View>
       )}
 
-      {/* <TextInput
-        ref={scanner_input_ref}
-        value={scanned_value}
-        onChangeText={(text) => {
-          set_scanned_value(text);
-          if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-          typingTimeoutRef.current = setTimeout(
-            () => text && handle_qr_scan(text),
-            700,
-          );
-        }}
-        showSoftInputOnFocus={false}
-        style={{ opacity: 0, height: 0 }}
-      /> */}
+      {/* HIDDEN BACKGROUND INPUT PARA SA HARDWARE SCANNER */}
       <TextInput
         ref={scanner_input_ref}
         showSoftInputOnFocus={false}
@@ -166,7 +167,6 @@ const LPN_Form = ({ navigation, route }) => {
           }
         }}
         blurOnSubmit={false}
-        autoFocus={true}
       />
 
       {/* HEADER */}
@@ -334,4 +334,4 @@ const LPN_Form = ({ navigation, route }) => {
   );
 };
 
-export default LPN_Form;
+export default LPN_Register;

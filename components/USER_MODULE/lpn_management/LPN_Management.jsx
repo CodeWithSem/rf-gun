@@ -19,7 +19,8 @@ import {
 } from "lucide-react-native";
 import { useIsFocused } from "@react-navigation/native";
 
-const LPN_Allocation = ({ navigation }) => {
+const LPN_Allocation = ({ navigation, route }) => {
+  const { user_data } = route.params || {};
   const isFocused = useIsFocused();
   const dummyInputRef = useRef(null);
 
@@ -50,7 +51,7 @@ const LPN_Allocation = ({ navigation }) => {
     <TouchableOpacity
       activeOpacity={0.7}
       onPress={onPress}
-      className="bg-white mx-6 mb-4 p-5 rounded-3xl border border-slate-100 shadow-sm flex-row items-center"
+      className="bg-white mx-6 mb-4 p-5 rounded-3xl border border-slate-200 flex-row items-center"
     >
       <View className={`p-4 rounded-2xl ${colorClass} mr-4`}>
         <Icon size={28} color="white" />
@@ -110,7 +111,7 @@ const LPN_Allocation = ({ navigation }) => {
           style={{ fontFamily: "Outfit-Bold" }}
           className="text-xl text-slate-900 ml-2"
         >
-          LPN Allocation
+          LPN Management
         </Text>
       </View>
       <ScrollView showsVerticalScrollIndicator={false} className="flex-1 pt-2">
@@ -129,7 +130,7 @@ const LPN_Allocation = ({ navigation }) => {
           title="Search LPN"
           description="Find and view current LPN details"
           icon={Search}
-          colorClass="bg-blue-500"
+          colorClass="bg-sky-600"
           onPress={() => navigation.navigate("lpn_search")}
         />
 
@@ -139,16 +140,24 @@ const LPN_Allocation = ({ navigation }) => {
           description="Assign items to a new License Plate Number"
           icon={PlusCircle}
           colorClass="bg-emerald-500"
-          onPress={() => navigation.navigate("lpn_form")}
+          onPress={() =>
+            navigation.navigate("lpn_register", {
+              user_data: user_data,
+            })
+          }
         />
 
         {/* 3rd Button: Update LPN */}
         <MenuButton
           title="Update LPN"
-          description="Replace or transfer current LPN data"
+          description="Edit the details of current LPN"
           icon={RefreshCw}
           colorClass="bg-orange-500"
-          onPress={() => navigation.navigate("lpn_update")} // Palitan ang name base sa stack name mo
+          onPress={() =>
+            navigation.navigate("lpn_update", {
+              user_data: user_data,
+            })
+          }
         />
         {/* 3rd Button: Update LPN */}
         <MenuButton
@@ -156,7 +165,11 @@ const LPN_Allocation = ({ navigation }) => {
           description="Remove current LPN data"
           icon={PackageMinus}
           colorClass="bg-red-500"
-          onPress={() => navigation.navigate("lpn_out")} // Palitan ang name base sa stack name mo
+          onPress={() =>
+            navigation.navigate("lpn_out", {
+              user_data: user_data,
+            })
+          }
         />
       </ScrollView>
       {/* Footer / Version Info (Optional) */}
@@ -167,7 +180,7 @@ const LPN_Allocation = ({ navigation }) => {
             style={{ fontFamily: "Outfit-Medium" }}
             className="text-slate-500 text-[10px] ml-1.5"
           >
-            Authorized Access Only v 1.0.0
+            Authorized Access Only v 1.0.1
           </Text>
         </View>
       </View>

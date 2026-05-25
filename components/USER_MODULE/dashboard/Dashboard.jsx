@@ -24,7 +24,7 @@ import {
 } from "lucide-react-native";
 import { useIsFocused } from "@react-navigation/native";
 
-const Dashboard = ({ route, navigation }) => {
+const Dashboard = ({ route, navigation, allowed_modules }) => {
   const { user } = route.params;
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const isFocused = useIsFocused();
@@ -48,9 +48,10 @@ const Dashboard = ({ route, navigation }) => {
   }, [isFocused]);
 
   // Updated modules with unique colors and icons
-  const modules = [
+  const all_modules = [
     {
       id: "transfer_order",
+      code: "TO", // Match sa "TO" mula sa "TO,UDT,LPNM"
       name: "Transfer Order",
       desc: "View and process assigned tasks",
       icon: <ClipboardList size={24} color="#0284c7" />,
@@ -59,6 +60,7 @@ const Dashboard = ({ route, navigation }) => {
     },
     {
       id: "user_direct",
+      code: "UDT", // Match sa "UDT"
       name: "User Directed Transfer",
       desc: "Manual LPN movement",
       icon: <Move size={24} color="#0284c7" />,
@@ -66,38 +68,21 @@ const Dashboard = ({ route, navigation }) => {
       borderColor: "border-sky-100",
     },
     {
-      id: "lpn_allocation",
-      name: "LPN Allocation",
-      desc: "Assign LPNs",
+      id: "lpn_management",
+      code: "LPNM", // Match sa "LPNM"
+      name: "LPN Management",
+      desc: "Search, Create, Update, and Remove LPNs",
       icon: <PackageCheck size={24} color="#0284c7" />,
       color: "bg-sky-50",
       borderColor: "border-sky-100",
     },
-    // {
-    //   id: "inventory",
-    //   name: "Inventory Control",
-    //   desc: "Cycle count & stock check",
-    //   icon: <PackageCheck size={24} color="#0284c7" />,
-    //   color: "bg-sky-50",
-    //   borderColor: "border-sky-100",
-    // },
-    // {
-    //   id: "picking",
-    //   name: "Picking",
-    //   desc: "Order fulfillment",
-    //   icon: <PackageSearch size={24} color="#0284c7" />,
-    //   color: "bg-sky-50",
-    //   borderColor: "border-sky-100",
-    // },
-    // {
-    //   id: "dispatch",
-    //   name: "Dispatch",
-    //   desc: "Loading & shipping",
-    //   icon: <Truck size={24} color="#0284c7" />,
-    //   color: "bg-sky-50",
-    //   borderColor: "border-sky-100",
-    // },
   ];
+
+  const filteredModules = all_modules.filter((module) => {
+    if (!allowed_modules) return false; // Itago lahat kung wala pang data
+    const allowedArray = allowed_modules.split(",");
+    return allowedArray.includes(module.code);
+  });
 
   const handleLogout = () => {
     setShowLogoutModal(false);
@@ -109,7 +94,7 @@ const Dashboard = ({ route, navigation }) => {
       navigation.navigate(module_id, { user_data: user });
     } else if (module_id === "user_direct") {
       navigation.navigate(module_id, { user_data: user });
-    } else if (module_id === "lpn_allocation") {
+    } else if (module_id === "lpn_management") {
       navigation.navigate(module_id, { user_data: user });
     } else {
       // Custom Alert style could be added later
@@ -143,7 +128,7 @@ const Dashboard = ({ route, navigation }) => {
 
   return (
     <SafeAreaView className="flex-1 bg-slate-50">
-      <StatusBar barStyle="dark-content" backgroundColor="#f8fafc" />
+      <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
 
       <ScrollView className="flex-1 px-6" showsVerticalScrollIndicator={false}>
         {/* 1. Header Section */}
@@ -181,7 +166,7 @@ const Dashboard = ({ route, navigation }) => {
         </Text>
 
         <View className="pb-10">
-          {modules.map((item) => (
+          {filteredModules.map((item) => (
             <TouchableOpacity
               key={item.id}
               activeOpacity={0.7}

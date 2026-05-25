@@ -18,14 +18,16 @@ import "./global.css";
 import Login from "./components/AUTHENTICATION/Login";
 import Dashboard from "./components/USER_MODULE/dashboard/Dashboard";
 import Transfer_Order from "./components/USER_MODULE/transfer_order/Transfer_Order";
-import LPN_Allocation from "./components/USER_MODULE/lpn_allocation/LPN_Allocation";
+import LPN_Management from "./components/USER_MODULE/lpn_management/LPN_Management";
 import TO_Process from "./components/USER_MODULE/transfer_order/TO_Process";
 import User_Direct from "./components/USER_MODULE/user_direct/User_Direct";
 import LPN_Transfer from "./components/USER_MODULE/user_direct/LPN_Transfer";
-import LPN_Form from "./components/USER_MODULE/lpn_allocation/LPN_Form";
-import LPN_Update from "./components/USER_MODULE/lpn_allocation/LPN_Update";
-import LPN_Search from "./components/USER_MODULE/lpn_allocation/LPN_Search";
-import LPN_Out from "./components/USER_MODULE/lpn_allocation/LPN_Out";
+import LPN_Register from "./components/USER_MODULE/lpn_management/sub_module/lpn_register/LPN_Register";
+import LPN_Update from "./components/USER_MODULE/lpn_management/sub_module/lpn_update/LPN_Update";
+import LPN_Search from "./components/USER_MODULE/lpn_management/sub_module/LPN_Search";
+import LPN_Out from "./components/USER_MODULE/lpn_management/sub_module/LPN_Out";
+import LPN_Register_Input from "./components/USER_MODULE/lpn_management/sub_module/lpn_register/LPN_Register_Input";
+import LPN_Update_Input from "./components/USER_MODULE/lpn_management/sub_module/lpn_update/LPN_Update_Input";
 
 const Stack = createNativeStackNavigator();
 
@@ -33,22 +35,28 @@ export default function App() {
   const [fontsLoaded, setFontsLoaded] = useState(false);
   const [is_app_active, set_is_app_active] = useState(true);
   const [checking_version, set_checking_version] = useState(true);
-  const app_version = "v 1.0.0";
-  const app_version_rtdb = "1-0-0";
+  const app_version = "v 1.0.1";
+  const app_version_rtdb = "1-0-1";
+  const [allowed_modules, set_allowed_modules] = useState("");
 
-  // REALTIME DATABASE VERSION CHECK
   useEffect(() => {
-    // Path: DB1_ERP_SYSTEM/APP_VERSION/1-0-0/VALUE
+    // 1. Path para sa Version Check
     const version_ref = ref(
       realtime_db,
       `DB1_ERP_SYSTEM/APP_VERSION/${app_version_rtdb}/VALUE`,
     );
 
-    const unsubscribe = onValue(
+    // 2. Path para sa RF Gun Modules (BAGONG DAGDAG)
+    const rf_modules_ref = ref(
+      realtime_db,
+      `DB1_ERP_SYSTEM/RF_GUN_MODULE/VALUE`,
+    );
+
+    // Listener para sa Version
+    const unsubscribe_version = onValue(
       version_ref,
       (snapshot) => {
         const data = snapshot.val();
-        // Kung ang data ay explicit na 'false', i-lock ang app.
         set_is_app_active(data === false ? false : true);
         set_checking_version(false);
       },
@@ -58,7 +66,25 @@ export default function App() {
       },
     );
 
-    return () => unsubscribe();
+    // Listener para sa RF Gun Modules (BAGONG DAGDAG)
+    const unsubscribe_modules = onValue(
+      rf_modules_ref,
+      (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          set_allowed_modules(data);
+        }
+      },
+      (error) => {
+        console.warn("RTDB RF Modules Error:", error);
+      },
+    );
+
+    // Clean up both listeners
+    return () => {
+      unsubscribe_version();
+      unsubscribe_modules();
+    };
   }, []);
 
   useEffect(() => {
@@ -150,12 +176,24 @@ export default function App() {
               {(props) => <Login {...props} app_version={app_version} />}
             </Stack.Screen>
 
-            <Stack.Screen name="dashboard" component={Dashboard} />
+            <Stack.Screen name="dashboard">
+              {(props) => (
+                <Dashboard {...props} allowed_modules={allowed_modules} />
+              )}
+            </Stack.Screen>
             <Stack.Screen name="transfer_order" component={Transfer_Order} />
-            <Stack.Screen name="lpn_allocation" component={LPN_Allocation} />
+            <Stack.Screen name="lpn_management" component={LPN_Management} />
             <Stack.Screen name="lpn_search" component={LPN_Search} />
-            <Stack.Screen name="lpn_form" component={LPN_Form} />
+            <Stack.Screen name="lpn_register" component={LPN_Register} />
+            <Stack.Screen
+              name="lpn_register_input"
+              component={LPN_Register_Input}
+            />
             <Stack.Screen name="lpn_update" component={LPN_Update} />
+            <Stack.Screen
+              name="lpn_update_input"
+              component={LPN_Update_Input}
+            />
             <Stack.Screen name="lpn_out" component={LPN_Out} />
             <Stack.Screen name="to_process" component={TO_Process} />
             <Stack.Screen name="user_direct" component={User_Direct} />

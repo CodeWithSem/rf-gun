@@ -86,7 +86,13 @@ const LPN_Out = ({ navigation, route }) => {
             set_loading(true);
             const batch = writeBatch(firestore_db);
             const timestamp = format_date(get_date_now());
-
+            const unix_timestamp = Math.floor(Date.now() / 1000);
+            const current_time_str = new Intl.DateTimeFormat("en-US", {
+              hour: "2-digit",
+              minute: "2-digit",
+              hour12: true,
+            }).format(new Date());
+            const current_user = String(user_data?.username || "ADMIN");
             try {
               const active_ref = doc(
                 firestore_db,
@@ -100,15 +106,15 @@ const LPN_Out = ({ navigation, route }) => {
                 "DB1_ERP_SYSTEM",
                 "TBL_INVENTORY_HISTORY",
                 "DATA",
-                `${lpn_data.lpn_id}_OUT_${Date.now()}`, // Unique ID para sa history
+                `${unix_timestamp}_OUT_${lpn_data.lpn_id}_${current_user}`, // Unique ID para sa history
               );
-
               // 1. Move to History
               batch.set(history_ref, {
                 ...lpn_data,
                 transaction_type: "OUT",
-                out_by: user_data?.username || "DEV-001",
+                out_by: user_data?.username || "ADMIN",
                 out_date: timestamp,
+                out_time: current_time_str,
               });
 
               // 2. Delete from Active

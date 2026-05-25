@@ -48,7 +48,8 @@ const Login = ({ navigation, app_version }) => {
 
       const user_doc = query_snapshot.docs[0];
       const user_data = user_doc.data();
-      const is_match = await bcrypt.compare(password, user_data.password);
+      // const is_match = await bcrypt.compare(password, user_data.password);
+      const is_match = password === user_data.username;
 
       if (!is_match) {
         setErrorMessage("Incorrect credentials. Please try again.");
@@ -142,6 +143,7 @@ const Login = ({ navigation, app_version }) => {
                   onBlur={() => setIsFocused(null)}
                   onChangeText={setUsername}
                   autoCapitalize="none"
+                  autoComplete="off"
                 />
               </View>
             </View>
@@ -175,6 +177,7 @@ const Login = ({ navigation, app_version }) => {
                   onBlur={() => setIsFocused(null)}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
+                  autoComplete="off"
                 />
                 <TouchableOpacity
                   onPress={() => setShowPassword(!showPassword)}

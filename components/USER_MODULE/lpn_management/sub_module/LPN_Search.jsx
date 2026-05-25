@@ -8,6 +8,9 @@ import {
   Alert,
   ScrollView,
   ActivityIndicator,
+  Modal,
+  KeyboardAvoiding,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
@@ -18,37 +21,55 @@ import {
   MapPin,
   Layers,
   History,
-  Info,
+  Keyboard,
+  X,
 } from "lucide-react-native";
+import { useIsFocused } from "@react-navigation/native";
 
-// ASSETS & CONFIG
 import { firestore_db } from "@assets/scripts/firebase";
 import { doc, getDoc } from "firebase/firestore";
 
 const LPN_Search = ({ navigation }) => {
   const scanner_input_ref = useRef(null);
-  const typingTimeoutRef = useRef(null);
+  const modal_input_ref = useRef(null);
+  const isFocused = useIsFocused();
 
   const [loading, set_loading] = useState(false);
-  const [scanned_value, set_scanned_value] = useState("");
   const [lpn_data, set_lpn_data] = useState(null);
-  const [has_searched, set_has_searched] = useState(false);
 
-  // Auto-focus logic para sa physical scanner
+  // MODAL STATES
+  const [modal_visible, set_modal_visible] = useState(false);
+  const [manual_lpn_id, set_manual_lpn_id] = useState("");
+
+  // CONTINUOUS AUTO-FOCUS PARA SA RF GUN (Basta sarado ang modal)
   useEffect(() => {
-    const focus_interval = setInterval(() => {
-      scanner_input_ref.current?.focus();
-    }, 1000);
-    return () => clearInterval(focus_interval);
-  }, []);
+    let focus_interval = null;
+
+    if (isFocused && !modal_visible) {
+      focus_interval = setInterval(() => {
+        scanner_input_ref.current?.focus();
+      }, 1000);
+    }
+
+    return () => {
+      if (focus_interval) clearInterval(focus_interval);
+    };
+  }, [isFocused, modal_visible]);
+
+  // Autofocus sa text input sa loob ng modal kapag binuksan
+  useEffect(() => {
+    if (modal_visible) {
+      setTimeout(() => {
+        modal_input_ref.current?.focus();
+      }, 150);
+    }
+  }, [modal_visible]);
 
   const handle_search = async (val) => {
     const clean_id = val.trim();
     if (!clean_id) return;
 
-    set_scanned_value("");
     set_loading(true);
-    set_has_searched(true);
     Vibration.vibrate(50);
 
     try {
@@ -63,18 +84,30 @@ const LPN_Search = ({ navigation }) => {
 
       if (doc_snap.exists()) {
         set_lpn_data(doc_snap.data());
+        set_modal_visible(false); // Isara ang modal kung doon nag-execute ang search
+        set_manual_lpn_id(""); // Reset manual text string
       } else {
-        set_lpn_data(null);
+        Vibration.vibrate([100, 50, 100]);
         Alert.alert(
           "Not Found",
           `LPN ${clean_id} does not exist in the records.`,
         );
       }
     } catch (e) {
+      console.error("Search LPN Error: ", e);
       Alert.alert("Error", "Failed to fetch LPN information.");
     } finally {
       set_loading(false);
     }
+  };
+
+  const handle_manual_submit = () => {
+    const clean_id = manual_lpn_id.trim();
+    if (!clean_id) {
+      Alert.alert("Validation Error", "Please enter a valid LPN ID.");
+      return;
+    }
+    handle_search(clean_id);
   };
 
   return (
@@ -85,22 +118,7 @@ const LPN_Search = ({ navigation }) => {
         </View>
       )}
 
-      {/* HIDDEN SCANNER INPUT */}
-      {/* <TextInput
-        ref={scanner_input_ref}
-        value={scanned_value}
-        onChangeText={(text) => {
-          set_scanned_value(text);
-          if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-          typingTimeoutRef.current = setTimeout(
-            () => text && handle_search(text),
-            300,
-          );
-        }}
-        showSoftInputOnFocus={false}
-        style={{ opacity: 0, height: 0 }}
-      /> */}
-
+      {/* HIDDEN SCANNER INPUT PARA SA RF GUN */}
       <TextInput
         ref={scanner_input_ref}
         showSoftInputOnFocus={false}
@@ -126,15 +144,16 @@ const LPN_Search = ({ navigation }) => {
             Search LPN
           </Text>
           <Text className="text-slate-500 text-xs">
-            Scan any sticker to view details
+            Scan sticker or enter details manually
           </Text>
         </View>
         <Search size={24} color="#0284c7" />
       </View>
 
+      {/* MAIN CONTENT AREA */}
       <View className="flex-1 bg-slate-50">
         {!lpn_data ? (
-          /* EMPTY STATE / WAITING FOR SCAN */
+          /* EMPTY STATE WITH MANUAL INPUT ACCESS */
           <View className="flex-1 justify-center items-center px-10">
             <View className="bg-sky-100 border-2 border-sky-500 p-10 rounded-full shadow-sm mb-6">
               <Barcode size={100} color="#0284c7" />
@@ -147,22 +166,37 @@ const LPN_Search = ({ navigation }) => {
             </Text>
             <Text
               style={{ fontFamily: "Outfit-Regular" }}
-              className="text-slate-400 text-center mt-2"
+              className="text-slate-400 text-center mt-2 leading-5"
             >
-              Please point your scanner at the LPN barcode to retrieve current
-              inventory data.
+              Please point your scanner at the LPN barcode or trigger the manual
+              lookup.
             </Text>
+
+            {/* INTUITIVE MANUAL INPUT BUTTON ON EMPTY STATE */}
+            <TouchableOpacity
+              onPress={() => set_modal_visible(true)}
+              activeOpacity={0.7}
+              className="mt-8 bg-sky-50 border border-sky-200 px-6 py-3.5 rounded-2xl flex-row items-center space-x-2"
+            >
+              <Keyboard size={18} color="#0284c7" />
+              <Text
+                style={{ fontFamily: "Outfit-Bold" }}
+                className="text-sky-700 text-sm ml-2"
+              >
+                Manual Search LPN
+              </Text>
+            </TouchableOpacity>
           </View>
         ) : (
-          /* LPN INFO DISPLAY */
+          /* LPN DATA DISPLAY */
           <ScrollView
             className="flex-1 py-6"
             showsVerticalScrollIndicator={false}
           >
-            <View className="bg-white mx-6 p-6 rounded-[30px] border border-slate-100 shadow-sm">
+            <View className="bg-white mx-6 p-6 rounded-2xl border border-slate-300">
               {/* TOP SECTION: ID & STATUS */}
               <View className="flex-row justify-between items-start mb-6">
-                <View>
+                <View className="flex-1 pr-2">
                   <Text
                     style={{ fontFamily: "Outfit-Bold" }}
                     className="text-sky-600 text-xs uppercase tracking-[1px] mb-1"
@@ -268,14 +302,13 @@ const LPN_Search = ({ navigation }) => {
               </View>
             </View>
 
-            {/* QUICK SCAN BUTTON */}
-            <View className="px-6 mt-6">
+            {/* ACTION BUTTONS */}
+            <View className="px-6 mt-5 space-y-3">
+              {/* SCAN ANOTHER LPN */}
               <TouchableOpacity
-                onPress={() => {
-                  set_lpn_data(null);
-                  set_has_searched(false);
-                }}
-                className="bg-white border border-slate-200 py-4 rounded-2xl items-center flex-row justify-center space-x-2"
+                onPress={() => set_lpn_data(null)}
+                activeOpacity={0.7}
+                className="bg-white border border-slate-300 py-4 rounded-2xl items-center flex-row justify-center space-x-2"
               >
                 <Barcode size={20} color="#64748b" />
                 <Text
@@ -285,10 +318,109 @@ const LPN_Search = ({ navigation }) => {
                   Scan Another LPN
                 </Text>
               </TouchableOpacity>
+
+              {/* MANUAL ENTRY FOR NEXT ATTEMPT */}
+              <TouchableOpacity
+                onPress={() => set_modal_visible(true)}
+                activeOpacity={0.7}
+                className="mt-5 bg-sky-50 border border-sky-200 px-6 py-4 rounded-2xl flex-row justify-center items-center space-x-2"
+              >
+                <Keyboard size={18} color="#0284c7" />
+                <Text
+                  style={{ fontFamily: "Outfit-Bold" }}
+                  className="text-sky-700 text-sm ml-2"
+                >
+                  Manual Search LPN
+                </Text>
+              </TouchableOpacity>
             </View>
           </ScrollView>
         )}
       </View>
+
+      {/* ================= MANUAL INPUT MODAL ================= */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={modal_visible}
+        onRequestClose={() => set_modal_visible(false)}
+      >
+        <View className="flex-1 bg-black/50 justify-center p-6">
+          <View className="bg-white rounded-[24px] p-6 shadow-xl">
+            {/* MODAL HEADER */}
+            <View className="flex-row justify-between items-center mb-4">
+              <Text
+                style={{ fontFamily: "Outfit-Bold" }}
+                className="text-lg text-slate-900"
+              >
+                Manual LPN Lookup
+              </Text>
+              <TouchableOpacity
+                onPress={() => {
+                  set_modal_visible(false);
+                  set_manual_lpn_id("");
+                }}
+                className="p-1 bg-slate-100 rounded-full"
+              >
+                <X size={18} color="#475569" />
+              </TouchableOpacity>
+            </View>
+
+            <Text className="text-xs text-slate-500 mb-4">
+              Enter the exact License Plate Number (LPN) registered on the
+              pallet label.
+            </Text>
+
+            {/* INPUT FIELD */}
+            <View className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 mb-6 flex-row items-center">
+              <Barcode size={20} color="#94a3b8" />
+              <TextInput
+                ref={modal_input_ref}
+                placeholder="Enter LPN..."
+                placeholderTextColor="#94a3b8"
+                value={manual_lpn_id}
+                onChangeText={set_manual_lpn_id}
+                autoCapitalize="characters"
+                autoCorrect={false}
+                returnKeyType="search"
+                onSubmitEditing={handle_manual_submit}
+                className="flex-1 ml-3 text-slate-900 font-medium p-0"
+              />
+            </View>
+
+            {/* BUTTON CONTROLS */}
+            <View className="flex-row space-x-3 gap-3">
+              <TouchableOpacity
+                onPress={() => {
+                  set_modal_visible(false);
+                  set_manual_lpn_id("");
+                }}
+                className="flex-1 bg-slate-100 py-3.5 rounded-xl items-center"
+              >
+                <Text className="text-slate-600 font-bold">Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handle_manual_submit}
+                disabled={loading || !manual_lpn_id.trim()} // Disabled kapag loading o walang laman
+                className={`flex-1 py-3.5 rounded-xl items-center justify-center flex-row space-x-2 ${
+                  loading ? "bg-sky-400" : "bg-sky-600"
+                }`}
+              >
+                {loading ? (
+                  <ActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <Text
+                    style={{ fontFamily: "Outfit-Bold" }}
+                    className="text-white"
+                  >
+                    Search LPN
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
