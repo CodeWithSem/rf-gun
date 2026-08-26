@@ -23,6 +23,9 @@ import {
   History,
   Keyboard,
   X,
+  ArrowRight,
+  FileText,
+  MessageSquareText,
 } from "lucide-react-native";
 import { useIsFocused } from "@react-navigation/native";
 
@@ -195,19 +198,13 @@ const LPN_Search = ({ navigation }) => {
           >
             <View className="bg-white mx-6 p-6 rounded-2xl border border-slate-300">
               {/* TOP SECTION: ID & STATUS */}
-              <View className="flex-row justify-between items-start mb-6">
+              <View className="flex-row justify-between items-center">
                 <View className="flex-1 pr-2">
                   <Text
                     style={{ fontFamily: "Outfit-Bold" }}
                     className="text-sky-600 text-xs uppercase tracking-[1px] mb-1"
                   >
-                    LPN ID: {lpn_data.lpn_id}
-                  </Text>
-                  <Text
-                    style={{ fontFamily: "Outfit-Bold" }}
-                    className="text-2xl text-slate-900"
-                  >
-                    {lpn_data.item_code}
+                    LPN: {lpn_data.lpn_id}
                   </Text>
                 </View>
                 <View className="bg-green-100 px-4 py-1.5 rounded-full">
@@ -217,36 +214,76 @@ const LPN_Search = ({ navigation }) => {
                 </View>
               </View>
 
-              {/* LOCATION GRID */}
-              <View className="flex-row gap-4 mb-6">
+              <View className="flex-row gap-4 mt-6">
                 <View className="flex-1 bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                  <Warehouse size={18} color="#0284c7" className="mb-2" />
-                  <Text className="text-[10px] text-slate-400 font-bold uppercase mt-2">
-                    Warehouse
+                  <Text className="text-lg text-sky-600 font-bold uppercase">
+                    {lpn_data?.item_code || ""}
                   </Text>
+                  {lpn_data.item_desc && (
+                    <Text
+                      style={{ fontFamily: "Outfit-Bold" }}
+                      className="text-slate-900 text-xs"
+                    >
+                      {lpn_data?.item_desc || ""}
+                    </Text>
+                  )}
+                </View>
+              </View>
+
+              {/* LOCATION GRID */}
+              <View className="flex-row gap-4 mt-4">
+                <View className="flex-1 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                  <View className="flex-row gap-1.5 items-center">
+                    <Warehouse size={18} color="#0284c7" />
+                    <Text className="text-[10px] text-slate-400 font-bold uppercase">
+                      Warehouse
+                    </Text>
+                  </View>
                   <Text
                     style={{ fontFamily: "Outfit-Bold" }}
-                    className="text-slate-900 text-sm"
+                    className="text-slate-900 text-sm mt-2"
                   >
                     {lpn_data.warehouse_code}
                   </Text>
                 </View>
                 <View className="flex-1 bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                  <MapPin size={18} color="#f59e0b" className="mb-2" />
-                  <Text className="text-[10px] text-slate-400 font-bold uppercase mt-2">
-                    Bin Location
-                  </Text>
+                  <View className="flex-row gap-1.5 items-center">
+                    <MapPin size={18} color="#0284c7" />
+                    <Text className="text-[10px] text-slate-400 font-bold uppercase">
+                      Bin Location
+                    </Text>
+                  </View>
                   <Text
                     style={{ fontFamily: "Outfit-Bold" }}
-                    className="text-slate-900 text-sm"
+                    className="text-slate-900 text-sm mt-2"
                   >
                     {lpn_data.sbin_code}
                   </Text>
                 </View>
               </View>
 
+              {/* REMARKS */}
+              {lpn_data?.remarks && (
+                <View className="flex-row gap-4 mt-4">
+                  <View className="flex-1 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <View className="flex-row gap-1.5 items-center">
+                      <MessageSquareText size={18} color="#0284c7" />
+                      <Text className="text-[10px] text-slate-400 font-bold uppercase">
+                        Remarks
+                      </Text>
+                    </View>
+                    <Text
+                      style={{ fontFamily: "Outfit-Bold" }}
+                      className="text-slate-900 text-xs mt-2"
+                    >
+                      {lpn_data?.remarks}
+                    </Text>
+                  </View>
+                </View>
+              )}
+
               {/* QUANTITY SECTION */}
-              <View className="space-y-3 border-t border-slate-50 pt-5">
+              <View className="space-y-3 border-t border-slate-50 pt-5 mt-6">
                 <View className="flex-row justify-between items-center bg-slate-50/50 p-3 rounded-xl">
                   <View className="flex-row items-center">
                     <Layers size={18} color="#64748b" />
@@ -261,7 +298,7 @@ const LPN_Search = ({ navigation }) => {
                     style={{ fontFamily: "Outfit-Bold" }}
                     className="text-lg text-slate-900"
                   >
-                    {lpn_data.qty_base}{" "}
+                    {lpn_data.qty_base.toLocaleString()}{" "}
                     <Text className="text-xs text-slate-400">
                       {lpn_data.uom_base}
                     </Text>
@@ -289,21 +326,70 @@ const LPN_Search = ({ navigation }) => {
                   </View>
                 )}
               </View>
-
-              {/* FOOTER INFO */}
-              <View className="mt-8 flex-row items-center justify-center space-x-2 opacity-50">
-                <History size={14} color="#94a3b8" />
-                <Text
-                  style={{ fontFamily: "Outfit-Regular" }}
-                  className="text-[10px] text-slate-400"
-                >
-                  Last Updated: {lpn_data.update_date || "N/A"}
-                </Text>
-              </View>
             </View>
 
+            {/* TRANSFER ORDER REFERENCE CARD (Lalabas lang kung may to_number_ref) */}
+            {lpn_data?.to_number_ref &&
+              lpn_data.to_number_ref.trim() !== "" && (
+                <View className="mt-5 bg-amber-50/60 mx-6 p-4 rounded-2xl border border-amber-200">
+                  <View className="flex-row items-center justify-between border-b border-amber-200/60 pb-2 mb-3">
+                    <View className="flex-row items-center space-x-2">
+                      <View className="bg-amber-100 p-1.5 rounded-lg">
+                        <FileText size={14} color="#d97706" />
+                      </View>
+                      <Text
+                        style={{ fontFamily: "Outfit-Bold" }}
+                        className="ml-1 text-xs text-amber-800 uppercase tracking-wide"
+                      >
+                        {lpn_data.to_number_ref}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View className="flex-row items-center justify-between">
+                    {/* FROM LOCATION */}
+                    <View className="flex-1">
+                      <Text className="text-[9px] text-amber-600 font-bold uppercase mb-0.5">
+                        Current Location
+                      </Text>
+                      <Text
+                        style={{ fontFamily: "Outfit-Medium" }}
+                        className="text-slate-800 text-xs"
+                        numberOfLines={1}
+                      >
+                        {lpn_data?.warehouse_code || "-"}
+                      </Text>
+                      <Text className="text-[10px] text-slate-500 font-medium">
+                        Bin: {lpn_data?.sbin_code || "-"}
+                      </Text>
+                    </View>
+
+                    <View className="px-2">
+                      <ArrowRight size={16} color="#d97706" />
+                    </View>
+
+                    {/* TO LOCATION */}
+                    <View className="flex-1 items-end">
+                      <Text className="text-[9px] text-amber-600 font-bold uppercase mb-0.5">
+                        Target Destination
+                      </Text>
+                      <Text
+                        style={{ fontFamily: "Outfit-Medium" }}
+                        className="text-slate-800 text-xs text-right"
+                        numberOfLines={1}
+                      >
+                        {lpn_data?.to_warehouse_code || "-"}
+                      </Text>
+                      <Text className="text-[10px] text-slate-500 font-medium text-right">
+                        Bin: {lpn_data?.to_sbin_code || "-"}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              )}
+
             {/* ACTION BUTTONS */}
-            <View className="px-6 mt-5 space-y-3">
+            <View className="px-6 mt-5 pb-10">
               {/* SCAN ANOTHER LPN */}
               <TouchableOpacity
                 onPress={() => set_lpn_data(null)}
@@ -323,12 +409,12 @@ const LPN_Search = ({ navigation }) => {
               <TouchableOpacity
                 onPress={() => set_modal_visible(true)}
                 activeOpacity={0.7}
-                className="mt-5 bg-sky-50 border border-sky-200 px-6 py-4 rounded-2xl flex-row justify-center items-center space-x-2"
+                className="mt-2 bg-sky-50 border border-sky-300 py-4 rounded-2xl flex-row justify-center items-center space-x-2"
               >
                 <Keyboard size={18} color="#0284c7" />
                 <Text
                   style={{ fontFamily: "Outfit-Bold" }}
-                  className="text-sky-700 text-sm ml-2"
+                  className="text-sky-700 ml-2"
                 >
                   Manual Search LPN
                 </Text>

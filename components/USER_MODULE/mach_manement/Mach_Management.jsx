@@ -16,11 +16,12 @@ import {
   RefreshCw,
   PackageMinus,
   ShieldCheck,
+  FileText,
 } from "lucide-react-native";
 import { useIsFocused } from "@react-navigation/native";
 import { APP_VERSION } from "../../../constants/variable";
 
-const LPN_Management = ({ navigation, route }) => {
+const Mach_Management = ({ navigation, route }) => {
   const { user_data } = route.params || {};
   const isFocused = useIsFocused();
   const dummyInputRef = useRef(null);
@@ -112,7 +113,7 @@ const LPN_Management = ({ navigation, route }) => {
           style={{ fontFamily: "Outfit-Bold" }}
           className="text-xl text-slate-900 ml-2"
         >
-          LPN Management
+          Machine Management
         </Text>
       </View>
       <ScrollView showsVerticalScrollIndicator={false} className="flex-1 pt-2">
@@ -125,49 +126,13 @@ const LPN_Management = ({ navigation, route }) => {
             Select Action
           </Text>
         </View>
-
-        {/* 1st Button: Search LPN */}
         <MenuButton
-          title="Search LPN"
-          description="Find and view current LPN details"
-          icon={Search}
-          colorClass="bg-sky-600"
-          onPress={() => navigation.navigate("lpn_search")}
-        />
-
-        {/* 2nd Button: Register New LPN */}
-        <MenuButton
-          title="Register New LPN"
-          description="Assign items to a new License Plate Number"
-          icon={PlusCircle}
-          colorClass="bg-emerald-500"
-          onPress={() =>
-            navigation.navigate("lpn_register", {
-              user_data: user_data,
-            })
-          }
-        />
-
-        {/* 3rd Button: Update LPN */}
-        <MenuButton
-          title="Update LPN"
-          description="Edit the details of current LPN"
-          icon={RefreshCw}
-          colorClass="bg-orange-500"
-          onPress={() =>
-            navigation.navigate("lpn_update", {
-              user_data: user_data,
-            })
-          }
-        />
-        {/* 3rd Button: Update LPN */}
-        <MenuButton
-          title="LPN Out"
-          description="Remove current LPN data"
-          icon={PackageMinus}
+          title="Downtime Report"
+          description="Production machine downtime report"
+          icon={FileText}
           colorClass="bg-red-500"
           onPress={() =>
-            navigation.navigate("lpn_out", {
+            navigation.navigate("downtime_report", {
               user_data: user_data,
             })
           }
@@ -185,14 +150,6 @@ const LPN_Management = ({ navigation, route }) => {
           </Text>
         </View>
       </View>
-      {/* <TextInput
-        ref={dummyInputRef}
-        showSoftInputOnFocus={false}
-        // Panatilihing nakatago pero active
-        // style={{ opacity: 0, height: 0, position: 'absolute' }}
-        value=""
-        onChangeText={() => {}}
-      /> */}
       <TextInput
         ref={dummyInputRef}
         showSoftInputOnFocus={false}
@@ -208,4 +165,4 @@ const LPN_Management = ({ navigation, route }) => {
   );
 };
 
-export default LPN_Management;
+export default Mach_Management;

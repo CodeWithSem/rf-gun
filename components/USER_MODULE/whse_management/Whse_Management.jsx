@@ -16,11 +16,13 @@ import {
   RefreshCw,
   PackageMinus,
   ShieldCheck,
+  PackageSearch,
+  Move,
 } from "lucide-react-native";
 import { useIsFocused } from "@react-navigation/native";
 import { APP_VERSION } from "../../../constants/variable";
 
-const LPN_Management = ({ navigation, route }) => {
+const Whse_Management = ({ navigation, route }) => {
   const { user_data } = route.params || {};
   const isFocused = useIsFocused();
   const dummyInputRef = useRef(null);
@@ -112,7 +114,7 @@ const LPN_Management = ({ navigation, route }) => {
           style={{ fontFamily: "Outfit-Bold" }}
           className="text-xl text-slate-900 ml-2"
         >
-          LPN Management
+          Warehouse Management
         </Text>
       </View>
       <ScrollView showsVerticalScrollIndicator={false} className="flex-1 pt-2">
@@ -126,48 +128,22 @@ const LPN_Management = ({ navigation, route }) => {
           </Text>
         </View>
 
-        {/* 1st Button: Search LPN */}
+        {/* 1st Button: Storage Bin Lookup */}
         <MenuButton
-          title="Search LPN"
-          description="Find and view current LPN details"
-          icon={Search}
+          title="Storage Bin Lookup"
+          description="Find and view current LPNs in storage bin"
+          icon={PackageSearch}
           colorClass="bg-sky-600"
-          onPress={() => navigation.navigate("lpn_search")}
+          onPress={() => navigation.navigate("bin_lookup")}
         />
-
-        {/* 2nd Button: Register New LPN */}
+        {/* 2nd Button: Bulk Transfer */}
         <MenuButton
-          title="Register New LPN"
-          description="Assign items to a new License Plate Number"
-          icon={PlusCircle}
-          colorClass="bg-emerald-500"
+          title="Bulk Transfer"
+          description="Tranfer of multiple LPNs to a new bin location"
+          icon={Move}
+          colorClass="bg-sky-600"
           onPress={() =>
-            navigation.navigate("lpn_register", {
-              user_data: user_data,
-            })
-          }
-        />
-
-        {/* 3rd Button: Update LPN */}
-        <MenuButton
-          title="Update LPN"
-          description="Edit the details of current LPN"
-          icon={RefreshCw}
-          colorClass="bg-orange-500"
-          onPress={() =>
-            navigation.navigate("lpn_update", {
-              user_data: user_data,
-            })
-          }
-        />
-        {/* 3rd Button: Update LPN */}
-        <MenuButton
-          title="LPN Out"
-          description="Remove current LPN data"
-          icon={PackageMinus}
-          colorClass="bg-red-500"
-          onPress={() =>
-            navigation.navigate("lpn_out", {
+            navigation.navigate("bulk_transfer", {
               user_data: user_data,
             })
           }
@@ -208,4 +184,4 @@ const LPN_Management = ({ navigation, route }) => {
   );
 };
 
-export default LPN_Management;
+export default Whse_Management;

@@ -19,37 +19,50 @@ import {
   AlertCircle,
   QrCode,
   ChevronDown,
+  Plus,
+  Minus,
 } from "lucide-react-native";
 
 // ASSETS & CONFIG
 import { firestore_db } from "@assets/scripts/firebase";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, writeBatch } from "firebase/firestore";
 import { format_date, get_date_now } from "@assets/scripts/functions/format";
 import { use_item_master } from "@assets/scripts/functions/item_master_context";
 import Item_Master_Modal from "@assets/elements/item_master_modal/Item_Master_Moda";
 
-const LPN_Register_Input = ({ navigation, route }) => {
-  const { current_lpn_id, user_data } = route.params || {};
+const LPN_Update_Input = ({ navigation, route }) => {
+  const { old_lpn_data, user_data } = route.params || {};
   const { item_master_data, is_loading_items } = use_item_master();
 
   const bin_scanner_ref = useRef(null);
   const [loading, set_loading] = useState(false);
 
-  // OBJECT STATE PARA SA NAPILING ITEM
-  const [selected_item, set_selected_item] = useState(null);
+  // OBJECT STATE PARA SA NAPILING ITEM (Inisyal na laman ay galing sa lumang data)
+  const [selected_item, set_selected_item] = useState(
+    old_lpn_data
+      ? {
+          item_code: old_lpn_data.item_code || "",
+          item_desc: old_lpn_data.item_desc || "No description available",
+          uom_base: old_lpn_data.uom_base || "",
+        }
+      : null,
+  );
 
   // FORM FIELDS
-  const [qty_input, set_qty_input] = useState("1");
-  const [remarks_input, set_remarks_input] = useState("");
-  const [uom_base, set_uom_base] = useState("");
-  const [qty_in_kg, set_qty_in_kg] = useState("0");
-  const [warehouse_code, set_warehouse_code] = useState("");
-  const [sbin_code, set_sbin_code] = useState("");
+  const [qty_input, set_qty_input] = useState(
+    String(old_lpn_data?.qty_base ?? "0"),
+  );
+  const [qty_in_kg, set_qty_in_kg] = useState(
+    String(old_lpn_data?.qty_in_kg ?? "0"),
+  );
+  const [warehouse_code, set_warehouse_code] = useState(
+    old_lpn_data?.warehouse_code || "",
+  );
+  const [sbin_code, set_sbin_code] = useState(old_lpn_data?.sbin_code || "");
 
   // MODAL STATES
   const [is_item_modal_visible, set_is_item_modal_visible] = useState(false);
   const [is_bin_modal_visible, set_is_bin_modal_visible] = useState(false);
-  const [is_uom_modal_visible, set_is_uom_modal_visible] = useState(false);
   const [temp_warehouse, set_temp_warehouse] = useState("");
   const [temp_sbin, set_temp_sbin] = useState("");
 
@@ -67,12 +80,6 @@ const LPN_Register_Input = ({ navigation, route }) => {
     if (!scanned_string) return;
 
     const clean_str = scanned_string.trim();
-
-    if (!clean_str.includes("_")) {
-      Vibration.vibrate([100, 50, 100]);
-      Alert.alert("Invalid Bin Format", "Scanned code must be registered.");
-      return;
-    }
 
     Vibration.vibrate(50);
     const parts = clean_str.split("_");
@@ -95,7 +102,7 @@ const LPN_Register_Input = ({ navigation, route }) => {
     set_temp_sbin("");
   };
 
-  const handle_save_lpn = async () => {
+  const handle_update_lpn = async () => {
     if (
       !selected_item?.item_code ||
       !sbin_code ||
@@ -106,56 +113,116 @@ const LPN_Register_Input = ({ navigation, route }) => {
     ) {
       Alert.alert(
         "Missing Info",
-        "Please fill up all required fields and scan a storage bin.",
+        "Please fill up all required fields and ensure storage bin is selected.",
       );
       return;
     }
 
     set_loading(true);
-    const timestamp = format_date(get_date_now());
-    const full_name = `${user_data?.first_name} ${user_data?.last_name}`;
+
+    const timestamp_str = format_date(get_date_now());
+    const unix_timestamp = Math.floor(Date.now() / 1000);
+    const current_time_str = new Intl.DateTimeFormat("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    }).format(new Date());
+    const current_user = String(user_data?.username || "ADMIN");
+    const target_lpn_id = String(old_lpn_data?.lpn_id);
+
     try {
-      const new_lpn_entry = {
-        batch_code: "",
-        created_by: String(full_name || "ADMIN"),
-        creation_date: String(timestamp),
-        expiry_date: "",
-        gr_number: "",
+      const batch = writeBatch(firestore_db);
+
+      // 1. UPDATE TBL_INVENTORY_COUNT
+      const updated_lpn_entry = {
+        ...old_lpn_data,
         item_code: String(selected_item.item_code).toUpperCase(),
-        item_desc: String(selected_item.item_desc).toUpperCase(),
-        lpn_id: String(current_lpn_id),
-        lpn_status: "Available",
-        mfg_date: "",
-        plant_code: "PL01",
-        po_number: "",
+        item_desc: String(selected_item.item_desc),
         qty_base: Number(qty_input),
         qty_in_kg: Number(qty_in_kg),
-        sbin_code: String(sbin_code).toUpperCase(),
-        sloc_code: "",
-        stype_code: "BULK",
         uom_base: String(selected_item.uom_base).toUpperCase(),
         uom_display: String(selected_item.uom_base).toUpperCase(),
         warehouse_code: String(warehouse_code).toUpperCase(),
-        remarks: String(remarks_input || ""),
+        sbin_code: String(sbin_code).toUpperCase(),
+        update_date: String(timestamp_str),
+        update_by: current_user,
       };
 
-      const doc_ref = doc(
+      const count_doc_ref = doc(
         firestore_db,
         "DB1_ERP_SYSTEM",
         "TBL_INVENTORY_COUNT",
         "DATA",
-        current_lpn_id,
+        target_lpn_id,
       );
-      await setDoc(doc_ref, new_lpn_entry);
+      batch.set(count_doc_ref, updated_lpn_entry);
+
+      // 2. AUDIT TRAIL LOG SA TBL_INVENTORY_HISTORY
+      const history_doc_id = `${unix_timestamp}_UPDATE_${target_lpn_id}_${current_user}`;
+
+      const history_entry = {
+        batch_code: String(old_lpn_data?.batch_code || ""),
+        created_by: String(old_lpn_data?.created_by || ""),
+        creation_date: String(old_lpn_data?.creation_date || ""),
+        expiry_date: String(old_lpn_data?.expiry_date || ""),
+        gr_number: String(old_lpn_data?.gr_number || ""),
+        item_code: String(selected_item.item_code).toUpperCase(),
+        item_desc: String(selected_item.item_desc),
+        lpn_id: target_lpn_id,
+        lpn_status: String(old_lpn_data?.lpn_status || "Available"),
+        mfg_date: String(old_lpn_data?.mfg_date || ""),
+        plant_code: String(old_lpn_data?.plant_code || "PL01"),
+        po_number: String(old_lpn_data?.po_number || ""),
+        qty_base: Number(qty_input),
+        qty_in_kg: Number(qty_in_kg),
+        sbin_code: String(sbin_code).toUpperCase(),
+        sloc_code: String(old_lpn_data?.sloc_code || ""),
+        stype_code: String(old_lpn_data?.stype_code || "BULK"),
+        uom_base: String(selected_item.uom_base).toUpperCase(),
+        uom_display: String(selected_item.uom_base).toUpperCase(),
+        warehouse_code: String(warehouse_code).toUpperCase(),
+
+        update_date: String(timestamp_str),
+        update_time: current_time_str,
+        update_by: current_user,
+        transaction_type: "UPDATE",
+
+        from_batch_code: String(old_lpn_data?.batch_code || ""),
+        from_expiry_date: String(old_lpn_data?.expiry_date || ""),
+        from_gr_number: String(old_lpn_data?.gr_number || ""),
+        from_item_code: String(old_lpn_data?.item_code || ""),
+        from_lpn_id: target_lpn_id,
+        from_lpn_status: String(old_lpn_data?.lpn_status || "Available"),
+        from_mfg_date: String(old_lpn_data?.mfg_date || ""),
+        from_po_number: String(old_lpn_data?.po_number || ""),
+        from_qty_base: Number(old_lpn_data?.qty_base ?? 0),
+        from_qty_in_kg: Number(old_lpn_data?.qty_in_kg ?? 0),
+        from_uom_base: String(old_lpn_data?.uom_base || ""),
+        from_uom_display: String(old_lpn_data?.uom_display || ""),
+        from_warehouse_code: String(old_lpn_data?.warehouse_code || ""),
+      };
+
+      const history_doc_ref = doc(
+        firestore_db,
+        "DB1_ERP_SYSTEM",
+        "TBL_INVENTORY_HISTORY",
+        "DATA",
+        history_doc_id,
+      );
+      batch.set(history_doc_ref, history_entry);
+
+      await batch.commit();
 
       Vibration.vibrate(70);
-
-      Alert.alert("Success", "LPN successfully registered.", [
-        { text: "OK", onPress: () => navigation.goBack() },
+      Alert.alert("Success", "LPN records updated successfully.", [
+        {
+          text: "OK",
+          onPress: () => navigation.pop(2),
+        },
       ]);
     } catch (error) {
-      console.error(error);
-      Alert.alert("Error", "Failed to register LPN.");
+      console.error("Update Transaction Error: ", error);
+      Alert.alert("Error", "Failed to process LPN update transaction.");
     } finally {
       set_loading(false);
     }
@@ -176,10 +243,10 @@ const LPN_Register_Input = ({ navigation, route }) => {
         </TouchableOpacity>
         <View className="ml-2 flex-1">
           <Text style={{ fontFamily: "Outfit-Bold" }} className="text-xl">
-            LPN Details
+            Edit LPN Information
           </Text>
-          <Text className="text-emerald-600 font-bold text-xs">
-            ID: {current_lpn_id}
+          <Text className="text-orange-600 font-bold text-xs">
+            Target LPN: {old_lpn_data?.lpn_id}
           </Text>
         </View>
       </View>
@@ -193,7 +260,7 @@ const LPN_Register_Input = ({ navigation, route }) => {
           className="flex-1 px-6 pt-6"
           showsVerticalScrollIndicator={false}
         >
-          {/* ITEM CODE SELECTION LOOKUP */}
+          {/* ITEM CODE SELECTION LOOKUP BUTTON */}
           <View className="mb-4">
             <Text className="text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">
               Item Description
@@ -226,7 +293,7 @@ const LPN_Register_Input = ({ navigation, route }) => {
             </TouchableOpacity>
           </View>
 
-          {/* QTY, UOM, QTY IN KG ROW */}
+          {/* QUANTITY, UOM, AT WEIGHT ROW SECTIONS */}
           <View className="flex-row gap-3 mb-6 items-end">
             {/* QUANTITY INPUT */}
             <View className="flex-1">
@@ -251,29 +318,49 @@ const LPN_Register_Input = ({ navigation, route }) => {
                 {selected_item?.uom_base || ""}
               </Text>
             </View>
-          </View>
+            <View className="flex-1 flex-row gap-3 mb-6 h-[31px] justify-center">
+              <View className="flex-1">
+                <TouchableOpacity
+                  // onPress={() => mag pop up ang modal para mag input ng qty na idadagdag}
+                  className="bg-emerald-600 p-4 rounded-xl flex-row justify-center items-center"
+                  activeOpacity={0.8}
+                >
+                  <Plus size={23} color="white" />
+                </TouchableOpacity>
+              </View>
+              <View className="flex-1">
+                <TouchableOpacity
+                  // onPress={() => mag pop up ang modal para mag input ng qty na ibabawas}
+                  className="bg-rose-600 p-4 rounded-xl flex-row justify-center items-center"
+                  activeOpacity={0.8}
+                >
+                  <Minus size={23} color="white" />
+                </TouchableOpacity>
+              </View>
+            </View>
 
-          <View className="flex-row gap-3 mb-6 items-end">
-            {/* REMARKS INPUT */}
-            <View className="flex-1">
+            {/* QTY IN KG WEIGHT INPUT */}
+            {/* <View className="flex-1">
               <Text className="text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">
-                Remarks (Optional)
+                Qty In Kg
               </Text>
               <TextInput
+                keyboardType="numeric"
                 className="bg-slate-50 border border-slate-300 p-4 rounded-xl font-bold text-base text-slate-900"
-                value={remarks_input}
-                onChangeText={set_remarks_input}
+                value={qty_in_kg}
+                onChangeText={set_qty_in_kg}
+                placeholder="0"
               />
-            </View>
+            </View> */}
           </View>
 
-          {/* STORAGE METRICS SECTION */}
+          {/* STORAGE LOCATION METRICS CONTAINER */}
           <View className="p-4 bg-slate-50 border border-slate-200 rounded-2xl mb-8">
             <Text
               style={{ fontFamily: "Outfit-Bold" }}
               className="text-xs text-slate-700 mb-3 uppercase tracking-wider"
             >
-              Bin Location
+              Bin Location Assignment
             </Text>
 
             <View className="flex-row gap-3 mb-4">
@@ -294,6 +381,7 @@ const LPN_Register_Input = ({ navigation, route }) => {
                 </Text>
               </View>
             </View>
+
             <TouchableOpacity
               onPress={() => set_is_bin_modal_visible(true)}
               className="bg-sky-600 py-4 rounded-xl flex-row justify-center items-center"
@@ -304,32 +392,31 @@ const LPN_Register_Input = ({ navigation, route }) => {
                 style={{ fontFamily: "Outfit-Bold" }}
                 className="text-white ml-2 text-sm"
               >
-                Scan Bin Location
+                Scan New Bin Location
               </Text>
             </TouchableOpacity>
           </View>
 
-          {/* SUBMIT BUTTONS */}
-          <View className="flex-row gap-3 mb-4">
-            <TouchableOpacity
-              onPress={handle_save_lpn}
-              activeOpacity={0.8}
-              className="flex-1 bg-emerald-600 py-5 rounded-2xl justify-center items-center"
+          {/* SUBMIT TRANSACTION ACTION BUTTONS */}
+          <TouchableOpacity
+            onPress={handle_update_lpn}
+            activeOpacity={0.8}
+            className="bg-orange-500 py-5 rounded-2xl items-center mb-4 shadow-sm"
+          >
+            <Text
+              style={{ fontFamily: "Outfit-Bold" }}
+              className="text-white text-lg"
             >
-              <Text
-                style={{ fontFamily: "Outfit-Bold" }}
-                className="text-white text-base"
-              >
-                Confirm & Save LPN
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              className="w-[140px] bg-slate-100 border border-slate-300 py-5 rounded-2xl justify-center items-center"
-            >
-              <Text className="text-slate-500 font-bold text-base">Cancel</Text>
-            </TouchableOpacity>
-          </View>
+              Save & Apply Changes
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            className="bg-slate-100 py-5 rounded-2xl justify-center items-center mb-8"
+          >
+            <Text className="text-slate-500 font-bold text-lg">Cancel</Text>
+          </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -436,4 +523,4 @@ const LPN_Register_Input = ({ navigation, route }) => {
   );
 };
 
-export default LPN_Register_Input;
+export default LPN_Update_Input;

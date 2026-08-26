@@ -1,344 +1,292 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
-  TextInput,
-  FlatList,
-  Modal,
-  ActivityIndicator,
   ScrollView,
+  TextInput,
+  Vibration,
+  Alert,
+  Modal,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   ChevronLeft,
+  PlusCircle,
   Search,
-  Box,
+  RefreshCw,
+  PackageMinus,
+  ShieldCheck,
+  SquareArrowUp,
+  SquareArrowDown,
+  Truck,
   X,
-  ClipboardList,
-  PackageSearch,
-  MoveRight,
-  ChevronsRight,
-  PackageX,
-  ClipboardX,
+  SquareArrowRight,
+  SquareArrowLeft,
+  FileText,
 } from "lucide-react-native";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
-import { firestore_db } from "../../../assets/scripts/firebase";
+import { useIsFocused } from "@react-navigation/native";
+import { APP_VERSION } from "../../../constants/variable";
 
-// IMPORT LOCAL MASTER DATA
-import { qty_unit_conversion } from "@assets/scripts/functions/item_unit_conversion";
-import { item_master_list } from "@assets/data/item_master/item_master_list";
+const Transfer_Order = ({ navigation, route }) => {
+  const { user_data } = route.params || {};
+  const isFocused = useIsFocused();
+  const dummyInputRef = useRef(null);
 
-const Transfer_Order = ({ route, navigation }) => {
-  const { user_data } = route.params;
-
-  // State
-  const [is_loading, set_is_loading] = useState(true);
-  const [transfer_orders, set_transfer_orders] = useState([]);
-  const [search_query, set_search_query] = useState("");
-
-  // Modal State
-  const [is_modal_visible, set_is_modal_visible] = useState(false);
-  const [selected_to, set_selected_to] = useState(null);
+  // State para sa Modal ng Stock Transport
+  const [is_transport_modal_visible, set_is_transport_modal_visible] =
+    useState(false);
 
   useEffect(() => {
-    // Real-time Listener para sa Transfer Orders lang
-    const to_ref = collection(
-      firestore_db,
-      "DB1_ERP_SYSTEM",
-      "TBL_TRANSFER_ORDER",
-      "DATA",
-    );
-    const q = query(to_ref, where("to_status", "==", "Posted"));
+    let focusTimer;
 
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const fetched_orders = snapshot.docs.map((doc) => ({
-          doc_id: doc.id,
-          ...doc.data(),
-        }));
+    if (isFocused) {
+      // Nilalagyan ng maikling delay para siguradong tapos na ang screen transition
+      focusTimer = setTimeout(() => {
+        dummyInputRef.current?.focus();
+      }, 300);
+    } else {
+      dummyInputRef.current?.blur();
+    }
 
-        // Sort by TO Number Descending
-        const sorted_orders = fetched_orders.sort((a, b) =>
-          b.to_number.localeCompare(a.to_number),
-        );
+    return () => {
+      if (focusTimer) clearTimeout(focusTimer);
+    };
+  }, [isFocused]);
 
-        set_transfer_orders(sorted_orders);
-        set_is_loading(false);
-      },
-      (error) => {
-        console.error("Firestore Error:", error);
-        set_is_loading(false);
-      },
-    );
-
-    return () => unsubscribe();
-  }, []);
-
-  const render_lpn_row = (lpn_data) => {
-    // Gamitin ang local item_master_list para sa conversion
-    const display_qty = qty_unit_conversion(
-      lpn_data.qty_base_transfer,
-      lpn_data.uom_display,
-      lpn_data.item_code,
-      item_master_list,
-    );
-
-    return (
-      <View
-        key={lpn_data.lpn_id}
-        className="bg-slate-50 p-5 rounded-xl mb-4 border border-slate-200"
-      >
-        <View className="flex-row justify-between items-start mb-3">
-          <View className="flex-1">
-            <Text
-              style={{ fontFamily: "Outfit-Bold" }}
-              className="text-slate-800 text-base"
-            >
-              LPN: {lpn_data.lpn_id}
-            </Text>
-            <Text
-              style={{ fontFamily: "Outfit-Regular" }}
-              className="text-slate-500 text-xs mt-1"
-            >
-              {lpn_data.item_code}
-            </Text>
-            <Text
-              style={{ fontFamily: "Outfit-Regular" }}
-              className="text-slate-500 text-xs"
-            >
-              {lpn_data.item_desc}
-            </Text>
-          </View>
-          <View className="bg-sky-100 px-3 py-1 rounded-full">
-            <Text
-              style={{ fontFamily: "Outfit-Bold" }}
-              className="text-sky-700 text-[11px]"
-            >
-              {display_qty} {lpn_data.uom_display}
-            </Text>
-          </View>
-        </View>
-        <View className="flex-row items-center justify-between bg-white p-3 rounded-lg border border-slate-200">
-          <View>
-            <Text className="text-[9px] text-slate-400 uppercase font-[Outfit-Bold]">
-              From Bin
-            </Text>
-            <Text
-              style={{ fontFamily: "Outfit-Bold" }}
-              className="text-slate-600 text-xs"
-            >
-              {lpn_data.sbin_code}
-            </Text>
-          </View>
-          <ChevronsRight size={16} color="#0284c7" />
-          <View className="items-end">
-            <Text className="text-[9px] text-slate-400 uppercase font-[Outfit-Bold]">
-              To Bin
-            </Text>
-            <Text
-              style={{ fontFamily: "Outfit-Bold" }}
-              className="text-sky-600 text-xs"
-            >
-              {lpn_data.to_sbin_code}
-            </Text>
-          </View>
-        </View>
-      </View>
-    );
-  };
-
-  // ... (render_to_card remains the same as previous)
-  const render_to_card = ({ item }) => (
+  // Helper component para sa mga Buttons/Cards
+  const MenuButton = ({
+    title,
+    description,
+    icon: Icon,
+    onPress,
+    colorClass,
+  }) => (
     <TouchableOpacity
       activeOpacity={0.7}
-      onPress={() => {
-        set_selected_to(item);
-        set_is_modal_visible(true);
-      }}
-      className="bg-white p-5 rounded-xl mb-4 border border-slate-200"
+      onPress={onPress}
+      className="bg-white mx-6 mb-4 p-5 rounded-3xl border border-slate-200 flex-row items-center"
     >
-      <View className="flex-row justify-between items-center mb-4">
-        <View className="flex-row items-center">
-          <View className="bg-slate-100 p-2 rounded-lg mr-3">
-            <ClipboardList size={20} color="#475569" />
-          </View>
-          <Text
-            style={{ fontFamily: "Outfit-Bold" }}
-            className="text-lg text-slate-900"
-          >
-            {item.to_number}
-          </Text>
-        </View>
-        <View className="bg-green-50 px-3 py-1 rounded-full border border-green-100">
-          <Text
-            style={{ fontFamily: "Outfit-Bold" }}
-            className="text-green-600 text-[10px] uppercase"
-          >
-            {item.to_status}
-          </Text>
-        </View>
+      <View className={`p-4 rounded-2xl ${colorClass} mr-4`}>
+        <Icon size={28} color="white" />
       </View>
-
-      <View className="flex-row justify-between items-center pt-4 border-t border-slate-50">
-        <View className="flex-row items-center">
-          <PackageSearch size={14} color="#64748b" />
-          <Text
-            style={{ fontFamily: "Outfit-Medium" }}
-            className="text-slate-500 text-xs ml-2"
-          >
-            Items:{" "}
-            <Text className="text-slate-900 font-[Outfit-Bold]">
-              {item.selected_lpn_list.length}
-            </Text>
-          </Text>
-        </View>
+      <View className="flex-1">
+        <Text
+          style={{ fontFamily: "Outfit-Bold" }}
+          className="text-slate-900 text-lg"
+        >
+          {title}
+        </Text>
         <Text
           style={{ fontFamily: "Outfit-Regular" }}
-          className="text-slate-400 text-[10px]"
+          className="text-slate-500 text-xs"
         >
-          {item.post_date}
+          {description}
         </Text>
       </View>
     </TouchableOpacity>
   );
 
+  const [is_alerting, set_is_alerting] = useState(false);
+
+  const handle_stray_scan = (text) => {
+    // Kung wala pang text o may alert na nakabukas, huwag gawin ang logic
+    if (!text || is_alerting) return;
+
+    // I-set ang flag na "may alert na"
+    set_is_alerting(true);
+    Vibration.vibrate(50);
+
+    Alert.alert("Invalid Action", "Please select a menu before scanning.", [
+      {
+        text: "OK",
+        onPress: () => {
+          dummyInputRef.current?.clear();
+          // I-reset ang flag pagkapindot ng OK
+          set_is_alerting(false);
+          // I-focus ulit para sa susunod na scan
+          setTimeout(() => dummyInputRef.current?.focus(), 100);
+        },
+      },
+    ]);
+  };
+
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
-      {/* Header & Search */}
-      <View className="px-6 py-4 flex-row items-center justify-between border-b border-slate-100">
-        <View className="flex-row items-center">
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            className="p-2 -ml-2"
+    <SafeAreaView className="flex-1 bg-slate-50" edges={["top"]}>
+      {/* Header */}
+      <View className="flex-row items-center px-6 py-4 bg-white border-b border-slate-100 mb-6">
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          className="p-2 -ml-2"
+        >
+          <ChevronLeft size={24} color="#0f172a" />
+        </TouchableOpacity>
+        <Text
+          style={{ fontFamily: "Outfit-Bold" }}
+          className="text-xl text-slate-900 ml-2"
+        >
+          Transfer Order
+        </Text>
+      </View>
+
+      <ScrollView showsVerticalScrollIndicator={false} className="flex-1 pt-2">
+        {/* Instruction Text */}
+        <View className="px-8 mb-6">
+          <Text
+            style={{ fontFamily: "Outfit-Medium" }}
+            className="text-slate-400 text-sm uppercase tracking-widest"
           >
-            <ChevronLeft size={24} color="#0f172a" />
-          </TouchableOpacity>
-          <View className="ml-2">
-            <Text
-              style={{ fontFamily: "Outfit-Bold" }}
-              className="text-xl text-slate-900"
-            >
-              Transfer Order
-            </Text>
-            <Text
-              style={{ fontFamily: "Outfit-Regular" }}
-              className="text-slate-500 text-xs"
-            >
-              View and process assigned tasks
-            </Text>
-          </View>
+            Select Action
+          </Text>
         </View>
-      </View>
 
-      <View className="px-6 py-4 border-b border-slate-200">
-        <View className="bg-slate-50 flex-row items-center px-4 rounded-lg border border-slate-200">
-          <Search size={20} color="#94a3b8" />
-          <TextInput
-            placeholder="Search TO Number..."
-            className="flex-1 py-4 ml-2 font-[Outfit-Regular] text-slate-900"
-            value={search_query}
-            onChangeText={set_search_query}
-          />
-        </View>
-      </View>
-
-      {is_loading ? (
-        <View className="flex-1 justify-center items-center">
-          <ActivityIndicator size="large" color="#0284c7" />
-        </View>
-      ) : (
-        <FlatList
-          data={transfer_orders.filter((to) =>
-            to.to_number.toLowerCase().includes(search_query.toLowerCase()),
-          )}
-          className="bg-slate-50/50"
-          renderItem={render_to_card}
-          keyExtractor={(item) => item.doc_id}
-          contentContainerStyle={{
-            paddingHorizontal: 24,
-            paddingTop: 20,
-            paddingBottom: 100,
-          }}
-          ListEmptyComponent={() => (
-            <View className="items-center justify-center mt-20">
-              <ClipboardX size={48} color="#cbd5e1" />
-              <Text
-                style={{ fontFamily: "Outfit-Regular" }}
-                className="text-slate-400 mt-4"
-              >
-                No record found.
-              </Text>
-            </View>
-          )}
+        {/* 1st Button: Production Supply */}
+        <MenuButton
+          title="Production Supply"
+          description="Picking Process for Transfer Order"
+          icon={SquareArrowUp}
+          colorClass="bg-sky-600"
+          onPress={() =>
+            navigation.navigate("production_supply", {
+              user_data: user_data,
+            })
+          }
         />
-      )}
 
-      {/* Details Modal */}
-      <Modal visible={is_modal_visible} animationType="fade" transparent>
-        <View className="flex-1 bg-slate-900/60 justify-end">
-          <View className="bg-white rounded-t-[40px] h-[85%]">
-            <View className="px-8 pt-8 pb-6 flex-row justify-between items-center border-b border-slate-100">
-              <View className="flex-row items-center">
-                <View className="bg-sky-100 p-2 rounded-lg mr-3">
-                  <Box size={24} color="#0284c7" />
-                </View>
-                <View>
-                  <Text
-                    style={{ fontFamily: "Outfit-Bold" }}
-                    className="text-xl text-slate-900"
-                  >
-                    Transfer Order Details
-                  </Text>
-                  {/* Eto yung TO Number as Subtitle */}
-                  <Text
-                    style={{ fontFamily: "Outfit-Medium" }}
-                    className="text-sky-600 text-sm"
-                  >
-                    {selected_to?.to_number}
-                  </Text>
-                </View>
-              </View>
+        {/* 2nd Button: Stock Transport */}
+        <MenuButton
+          title="Stock Transport"
+          description="Material transport Process"
+          icon={Truck}
+          colorClass="bg-sky-600"
+          onPress={() => set_is_transport_modal_visible(true)}
+        />
 
-              <TouchableOpacity
-                onPress={() => set_is_modal_visible(false)}
-                className="bg-slate-100 p-2 rounded-full"
+        {/* 3rd Button: View Report */}
+        <MenuButton
+          title="View Report"
+          description="View transfer order report"
+          icon={FileText}
+          colorClass="bg-sky-600"
+          onPress={() =>
+            navigation.navigate("view_to_report", {
+              user_data: user_data,
+            })
+          }
+        />
+      </ScrollView>
+
+      {/* Footer / Version Info */}
+      <View className="py-6 items-center">
+        <View className="flex-row items-center bg-slate-200/50 px-4 py-1.5 rounded-full">
+          <ShieldCheck size={12} color="#64748b" />
+          <Text
+            style={{ fontFamily: "Outfit-Medium" }}
+            className="text-slate-500 text-[10px] ml-1.5"
+          >
+            Authorized Access Only {APP_VERSION}
+          </Text>
+        </View>
+      </View>
+
+      {/* Modal para sa Stock Transport Options */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={is_transport_modal_visible}
+        onRequestClose={() => set_is_transport_modal_visible(false)}
+      >
+        <View className="flex-1 bg-black/50 justify-center sm:justify-center items-center p-4">
+          <View className="bg-white w-full rounded-3xl p-6 border border-slate-100">
+            {/* Modal Header */}
+            <View className="flex-row justify-between items-center mb-6">
+              <Text
+                style={{ fontFamily: "Outfit-Bold" }}
+                className="text-xl text-slate-900"
               >
-                <X size={20} color="#64748b" />
+                Stock Transport
+              </Text>
+              <TouchableOpacity
+                onPress={() => set_is_transport_modal_visible(false)}
+                className="p-1"
+              >
+                <X size={22} color="#64748b" />
               </TouchableOpacity>
             </View>
 
-            <ScrollView
-              className="px-8 pt-6"
-              showsVerticalScrollIndicator={false}
+            {/* Option 1: Transfer Material */}
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => {
+                set_is_transport_modal_visible(false);
+                navigation.navigate("stock_transport", {
+                  user_data: user_data,
+                });
+              }}
+              className="bg-slate-50 p-4 rounded-2xl border border-slate-200 flex-row items-center mb-3 active:bg-slate-100"
             >
-              {selected_to?.selected_lpn_list.map((lpn) => render_lpn_row(lpn))}
-              <View className="h-10" />
-            </ScrollView>
-
-            <View className="p-5 border-t border-slate-100">
-              <TouchableOpacity
-                onPress={() => {
-                  set_is_modal_visible(false);
-                  navigation.navigate("to_process", {
-                    to_data: selected_to,
-                    user_data,
-                  });
-                }}
-                className="bg-sky-600 w-full py-5 rounded-xl items-center justify-center"
-              >
+              <View className="p-3 rounded-xl bg-sky-600 mr-4">
+                <SquareArrowRight size={22} color="white" />
+              </View>
+              <View className="flex-1">
                 <Text
                   style={{ fontFamily: "Outfit-Bold" }}
-                  className="text-white text-lg"
+                  className="text-slate-900 text-base"
                 >
-                  Start Transfer
+                  Transfer Material
                 </Text>
-              </TouchableOpacity>
-            </View>
+                <Text
+                  style={{ fontFamily: "Outfit-Regular" }}
+                  className="text-slate-500 text-xs"
+                >
+                  Stock transport creation
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            {/* Option 2: Receive Material */}
+            <TouchableOpacity
+              activeOpacity={0.7}
+              onPress={() => {
+                set_is_transport_modal_visible(false);
+                navigation.navigate("receive_sto", {
+                  user_data: user_data,
+                });
+              }}
+              className="bg-slate-50 p-4 rounded-2xl border border-slate-200 flex-row items-center active:bg-slate-100"
+            >
+              <View className="p-3 rounded-xl bg-emerald-600 mr-4">
+                <SquareArrowLeft size={22} color="white" />
+              </View>
+              <View className="flex-1">
+                <Text
+                  style={{ fontFamily: "Outfit-Bold" }}
+                  className="text-slate-900 text-base"
+                >
+                  Receive Material
+                </Text>
+                <Text
+                  style={{ fontFamily: "Outfit-Regular" }}
+                  className="text-slate-500 text-xs"
+                >
+                  Receive incoming material
+                </Text>
+              </View>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
+
+      <TextInput
+        ref={dummyInputRef}
+        showSoftInputOnFocus={false}
+        style={{ opacity: 0, height: 0, position: "absolute" }}
+        value=""
+        onSubmitEditing={(e) => {
+          handle_stray_scan(e.nativeEvent.text);
+        }}
+        blurOnSubmit={false}
+      />
     </SafeAreaView>
   );
 };

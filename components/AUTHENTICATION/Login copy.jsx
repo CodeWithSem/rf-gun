@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -10,127 +10,62 @@ import {
   Image,
   ActivityIndicator,
   StatusBar,
-  InteractionManager,
 } from "react-native";
-import { UserCheck, ShieldCheck } from "lucide-react-native";
+import bcrypt from "bcryptjs";
+import { Eye, EyeOff, Lock, User, ShieldCheck } from "lucide-react-native";
 import { firestore_db } from "../../assets/scripts/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import { APP_VERSION } from "../../constants/variable";
 
 const Login = ({ navigation }) => {
   const [username, setUsername] = useState("");
-  const [isFocused, setIsFocused] = useState(false);
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [isFocused, setIsFocused] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [isWarmingUp, setIsWarmingUp] = useState(true); // 🔴 Flag para sa Warmup Connection State
   const [errorMessage, setErrorMessage] = useState("");
 
-  // 1. FIRESTORE CONNECTION WARMUP
-  useEffect(() => {
-    let isMounted = true;
-
-    const warmupFirestore = async () => {
-      try {
-        const dummyRef = doc(
-          firestore_db,
-          "DB1_ERP_SYSTEM",
-          "TBL_AUTHENTICATION",
-        );
-        // I-establish ang SSL socket at initial connection sa Firestore
-        await getDoc(dummyRef);
-      } catch (e) {
-        console.warn("Firestore Warmup Error:", e);
-      } finally {
-        if (isMounted) {
-          setIsWarmingUp(false); // 🟢 Alisin ang Loading Screen kapag ready na ang connection
-        }
-      }
-    };
-
-    warmupFirestore();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  const handleLogin = () => {
-    const clean_pin = username.trim();
-
-    if (!clean_pin) {
-      setErrorMessage("Please enter your employee ID");
+  const handleLogin = async () => {
+    if (!username || !password) {
+      setErrorMessage("Please enter both username and password");
       return;
     }
-
     setErrorMessage("");
     setLoading(true);
+    try {
+      const users_ref = collection(
+        firestore_db,
+        "DB1_ERP_SYSTEM",
+        "TBL_AUTHENTICATION",
+        "DATA",
+      );
+      const q = query(users_ref, where("username", "==", username));
+      const query_snapshot = await getDocs(q);
 
-    // Frame buffer para masiguradong mag-render agad ang Loading Spinner sa button
-    setTimeout(async () => {
-      try {
-        const user_doc_ref = doc(
-          firestore_db,
-          "DB1_ERP_SYSTEM",
-          "TBL_AUTHENTICATION",
-          "DATA",
-          clean_pin,
-        );
-
-        const user_snapshot = await getDoc(user_doc_ref);
-
-        if (!user_snapshot.exists()) {
-          setErrorMessage("Invalid Employee ID. Please try again.");
-          setLoading(false);
-          return;
-        }
-
-        const user_data = user_snapshot.data();
-
-        InteractionManager.runAfterInteractions(() => {
-          navigation.replace("dashboard", { user: user_data });
-        });
-      } catch (error) {
-        console.error("Login error:", error);
-        setErrorMessage("Connection error. Check your network.");
-        setLoading(false);
+      if (query_snapshot.empty) {
+        setErrorMessage("User not found. Please try again.");
+        return;
       }
-    }, 50);
+
+      const user_doc = query_snapshot.docs[0];
+      const user_data = user_doc.data();
+
+      // bcrypt verification logic
+      // const is_match = await bcrypt.compare(password, user_data.password);
+      const is_match = password === user_data.username;
+
+      if (!is_match) {
+        setErrorMessage("Incorrect credentials. Please try again.");
+        return;
+      }
+      navigation.replace("dashboard", { user: user_data });
+    } catch (error) {
+      setErrorMessage("Connection error. Check your network.");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // 🔴 2. LOADING SCREEN HABANG HINDI PA TAPOS MAG-WARMUP ANG FIRESTORE
-  if (isWarmingUp) {
-    return (
-      <View className="flex-1 bg-slate-100 justify-center items-center px-10">
-        <StatusBar barStyle="dark-content" />
-
-        {/* Logo Card */}
-        <View className="bg-white p-4 rounded-3xl shadow-sm border border-slate-200 mb-6">
-          <Image
-            source={require("../../assets/images/delphys-sidebar-logo.png")}
-            className="w-12 h-12"
-            resizeMode="contain"
-          />
-        </View>
-
-        {/* Loading Indicator */}
-        <ActivityIndicator size="large" color="#0284c7" />
-
-        <Text
-          style={{ fontFamily: "Outfit-Medium" }}
-          className="text-slate-600 text-sm mt-4 tracking-wide"
-        >
-          Connecting to database...
-        </Text>
-        <Text
-          style={{ fontFamily: "Outfit-Regular" }}
-          className="text-slate-400 text-xs mt-1"
-        >
-          Please wait a moment
-        </Text>
-      </View>
-    );
-  }
-
-  // 🟢 3. ACTUAL LOGIN UI (Lalabas lang kapag ready na ang Firestore)
   return (
     <View className="flex-1 bg-slate-100">
       <StatusBar barStyle="dark-content" />
@@ -174,53 +109,91 @@ const Login = ({ navigation }) => {
           <View className="bg-white p-6 rounded-3xl shadow-xl shadow-slate-300 border border-white">
             <Text
               style={{ fontFamily: "Outfit-SemiBold" }}
-              className="text-slate-800 text-lg mb-1"
+              className="text-slate-800 text-lg mb-5"
             >
               Sign In
             </Text>
-            <Text
-              style={{ fontFamily: "Outfit-Regular" }}
-              className="text-slate-400 text-xs mb-5"
-            >
-              Please enter your Employee ID to login
-            </Text>
 
-            {/* PIN / Numeric Username Box */}
+            {/* Username Box */}
+            <View className="mb-4">
+              <Text
+                style={{ fontFamily: "Outfit-Medium" }}
+                className="text-slate-600 mb-2 ml-1"
+              >
+                Username
+              </Text>
+              <View
+                className={`flex-row items-center border-2 rounded-xl px-4 h-14 ${
+                  isFocused === "user"
+                    ? "border-sky-500 bg-sky-50/30"
+                    : "border-slate-100 bg-slate-50"
+                }`}
+              >
+                <User
+                  size={20}
+                  color={isFocused === "user" ? "#0284c7" : "#94a3b8"}
+                />
+                <TextInput
+                  placeholder="Enter username"
+                  placeholderTextColor="#94a3b8"
+                  style={{ fontFamily: "Outfit-Regular" }}
+                  className="flex-1 text-slate-900 ml-3 text-base"
+                  value={username}
+                  onFocus={() => setIsFocused("user")}
+                  onBlur={() => setIsFocused(null)}
+                  onChangeText={setUsername}
+                  autoCapitalize="none"
+                  autoComplete="off"
+                />
+              </View>
+            </View>
+
+            {/* Password Box */}
             <View className="mb-2">
               <Text
                 style={{ fontFamily: "Outfit-Medium" }}
                 className="text-slate-600 mb-2 ml-1"
               >
-                User ID
+                Password
               </Text>
               <View
                 className={`flex-row items-center border-2 rounded-xl px-4 h-14 ${
-                  isFocused
+                  isFocused === "pass"
                     ? "border-sky-500 bg-sky-50/30"
                     : "border-slate-100 bg-slate-50"
                 }`}
               >
-                <UserCheck
+                <Lock
                   size={20}
-                  color={isFocused ? "#0284c7" : "#94a3b8"}
+                  color={isFocused === "pass" ? "#0284c7" : "#94a3b8"}
                 />
                 <TextInput
-                  placeholder="Enter employee ID"
+                  placeholder="Enter password"
                   placeholderTextColor="#94a3b8"
-                  style={{
-                    fontFamily: "Outfit-Regular",
-                    includeFontPadding: false,
-                    paddingVertical: 0,
-                  }}
-                  className="flex-1 text-slate-900 ml-3 text-lg"
-                  value={username}
-                  onFocus={() => setIsFocused(true)}
-                  onBlur={() => setIsFocused(false)}
-                  onChangeText={setUsername}
-                  keyboardType="numeric"
-                  maxLength={10}
-                  onSubmitEditing={handleLogin}
+                  style={{ fontFamily: "Outfit-Regular" }}
+                  className="flex-1 text-slate-900 ml-3 text-base pr-2"
+                  value={password}
+                  onFocus={() => setIsFocused("pass")}
+                  onBlur={() => setIsFocused(null)}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoComplete="off"
                 />
+
+                {/* Fixed Action Button for Password Toggle */}
+                <TouchableOpacity
+                  onPress={() => setShowPassword((prev) => !prev)}
+                  activeOpacity={0.6}
+                  hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+                  className="p-2 justify-center items-center"
+                >
+                  {showPassword ? (
+                    <Eye size={20} color="#0284c7" />
+                  ) : (
+                    <EyeOff size={20} color="#94a3b8" />
+                  )}
+                </TouchableOpacity>
               </View>
             </View>
 
@@ -229,7 +202,7 @@ const Login = ({ navigation }) => {
               {errorMessage ? (
                 <Text
                   style={{ fontFamily: "Outfit-Medium" }}
-                  className="text-red-500 text-xs ml-1"
+                  className="text-red-500 text-xs"
                 >
                   {errorMessage}
                 </Text>
@@ -241,7 +214,7 @@ const Login = ({ navigation }) => {
               onPress={handleLogin}
               disabled={loading}
               activeOpacity={0.8}
-              className={`mt-3 flex-row items-center justify-center h-16 rounded-xl ${
+              className={`mt-4 flex-row items-center justify-center h-16 rounded-xl ${
                 loading ? "bg-sky-200" : "bg-sky-600"
               }`}
             >

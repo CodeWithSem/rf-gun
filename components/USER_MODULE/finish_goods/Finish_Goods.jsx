@@ -12,24 +12,24 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import {
   ChevronLeft,
   PlusCircle,
-  Search,
-  RefreshCw,
-  PackageMinus,
+  FileText,
   ShieldCheck,
+  Database,
 } from "lucide-react-native";
 import { useIsFocused } from "@react-navigation/native";
 import { APP_VERSION } from "../../../constants/variable";
 
-const LPN_Management = ({ navigation, route }) => {
+const LPN_Production = ({ navigation, route }) => {
   const { user_data } = route.params || {};
   const isFocused = useIsFocused();
   const dummyInputRef = useRef(null);
+  const [is_alerting, set_is_alerting] = useState(false);
 
+  // Auto-focus logic para sa hardware scanner interception
   useEffect(() => {
     let focusTimer;
 
     if (isFocused) {
-      // Nilalagyan ng maikling delay para siguradong tapos na ang screen transition
       focusTimer = setTimeout(() => {
         dummyInputRef.current?.focus();
       }, 300);
@@ -41,7 +41,31 @@ const LPN_Management = ({ navigation, route }) => {
       if (focusTimer) clearTimeout(focusTimer);
     };
   }, [isFocused]);
-  // Helper component para sa mga Buttons/Cards
+
+  // Stray scan handler - kapag nag-scan si user nang walang pinipiling sub-module
+  const handle_stray_scan = (text) => {
+    if (!text || is_alerting) return;
+
+    set_is_alerting(true);
+    Vibration.vibrate(50);
+
+    Alert.alert(
+      "Invalid Action",
+      "Please select a production menu before scanning.",
+      [
+        {
+          text: "OK",
+          onPress: () => {
+            dummyInputRef.current?.clear();
+            set_is_alerting(false);
+            setTimeout(() => dummyInputRef.current?.focus(), 100);
+          },
+        },
+      ],
+    );
+  };
+
+  // Reusable Menu Button Component
   const MenuButton = ({
     title,
     description,
@@ -74,30 +98,6 @@ const LPN_Management = ({ navigation, route }) => {
     </TouchableOpacity>
   );
 
-  const [is_alerting, set_is_alerting] = useState(false);
-
-  const handle_stray_scan = (text) => {
-    // Kung wala pang text o may alert na nakabukas, huwag gawin ang logic
-    if (!text || is_alerting) return;
-
-    // I-set ang flag na "may alert na"
-    set_is_alerting(true);
-    Vibration.vibrate(50);
-
-    Alert.alert("Invalid Action", "Please select a menu before scanning.", [
-      {
-        text: "OK",
-        onPress: () => {
-          dummyInputRef.current?.clear();
-          // I-reset ang flag pagkapindot ng OK
-          set_is_alerting(false);
-          // I-focus ulit para sa susunod na scan
-          setTimeout(() => dummyInputRef.current?.focus(), 100);
-        },
-      },
-    ]);
-  };
-
   return (
     <SafeAreaView className="flex-1 bg-slate-50" edges={["top"]}>
       {/* Header */}
@@ -112,68 +112,60 @@ const LPN_Management = ({ navigation, route }) => {
           style={{ fontFamily: "Outfit-Bold" }}
           className="text-xl text-slate-900 ml-2"
         >
-          LPN Management
+          Finish Goods
         </Text>
       </View>
+
       <ScrollView showsVerticalScrollIndicator={false} className="flex-1 pt-2">
-        {/* Instruction Text */}
+        {/* Instruction Label */}
         <View className="px-8 mb-6">
           <Text
             style={{ fontFamily: "Outfit-Medium" }}
             className="text-slate-400 text-sm uppercase tracking-widest"
           >
-            Select Action
+            Select Production Task
           </Text>
         </View>
 
-        {/* 1st Button: Search LPN */}
+        {/* 1st Sub-module: LPN Generation */}
         <MenuButton
-          title="Search LPN"
-          description="Find and view current LPN details"
-          icon={Search}
-          colorClass="bg-sky-600"
-          onPress={() => navigation.navigate("lpn_search")}
-        />
-
-        {/* 2nd Button: Register New LPN */}
-        <MenuButton
-          title="Register New LPN"
-          description="Assign items to a new License Plate Number"
+          title="FG Registration"
+          description="Register finished goods output to a new LPN"
           icon={PlusCircle}
           colorClass="bg-emerald-500"
           onPress={() =>
-            navigation.navigate("lpn_register", {
+            navigation.navigate("fg_registration", {
+              user_data: user_data,
+            })
+          }
+        />
+        <MenuButton
+          title="Registration Database"
+          description="View FG Registration database"
+          icon={Database}
+          colorClass="bg-sky-500"
+          onPress={() =>
+            navigation.navigate("registration_database", {
               user_data: user_data,
             })
           }
         />
 
-        {/* 3rd Button: Update LPN */}
-        <MenuButton
-          title="Update LPN"
-          description="Edit the details of current LPN"
-          icon={RefreshCw}
+        {/* 2nd Sub-module: LPN Correction */}
+        {/* <MenuButton
+          title="LPN Correction"
+          description="Modify or correct recently registered production LPN"
+          icon={FileText}
           colorClass="bg-orange-500"
           onPress={() =>
-            navigation.navigate("lpn_update", {
+            navigation.navigate("lpn_correction", {
               user_data: user_data,
             })
           }
-        />
-        {/* 3rd Button: Update LPN */}
-        <MenuButton
-          title="LPN Out"
-          description="Remove current LPN data"
-          icon={PackageMinus}
-          colorClass="bg-red-500"
-          onPress={() =>
-            navigation.navigate("lpn_out", {
-              user_data: user_data,
-            })
-          }
-        />
+        /> */}
       </ScrollView>
-      {/* Footer / Version Info (Optional) */}
+
+      {/* Footer / Guard Label */}
       <View className="py-6 items-center">
         <View className="flex-row items-center bg-slate-200/50 px-4 py-1.5 rounded-full">
           <ShieldCheck size={12} color="#64748b" />
@@ -181,24 +173,17 @@ const LPN_Management = ({ navigation, route }) => {
             style={{ fontFamily: "Outfit-Medium" }}
             className="text-slate-500 text-[10px] ml-1.5"
           >
-            Authorized Access Only {APP_VERSION}
+            Production Floor Access Only {APP_VERSION}
           </Text>
         </View>
       </View>
-      {/* <TextInput
-        ref={dummyInputRef}
-        showSoftInputOnFocus={false}
-        // Panatilihing nakatago pero active
-        // style={{ opacity: 0, height: 0, position: 'absolute' }}
-        value=""
-        onChangeText={() => {}}
-      /> */}
+
+      {/* Hidden input field for catching physical hardware scans */}
       <TextInput
         ref={dummyInputRef}
         showSoftInputOnFocus={false}
         style={{ opacity: 0, height: 0, position: "absolute" }}
         value=""
-        // Sa halip na onChangeText, dito natin ilalagay:
         onSubmitEditing={(e) => {
           handle_stray_scan(e.nativeEvent.text);
         }}
@@ -208,4 +193,4 @@ const LPN_Management = ({ navigation, route }) => {
   );
 };
 
-export default LPN_Management;
+export default LPN_Production;

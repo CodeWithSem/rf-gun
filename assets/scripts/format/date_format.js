@@ -6,6 +6,10 @@ export function get_date_now() {
 }
 // - Get Date Now
 
+export function get_iso_date_now() {
+  return new Date().toISOString();
+}
+
 // + Format Date Dash with optional time (mm-dd-yyyy [hh:mm AM/PM])
 export function format_date_dash(date_input, with_time = false) {
   let date;

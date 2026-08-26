@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
   ChevronLeft,
+  Scan,
   CheckCircle2,
   AlertCircle,
   QrCode,
@@ -26,33 +27,53 @@ import { firestore_db } from "@assets/scripts/firebase";
 import { doc, setDoc } from "firebase/firestore";
 import { format_date, get_date_now } from "@assets/scripts/functions/format";
 import { use_item_master } from "@assets/scripts/functions/item_master_context";
-import Item_Master_Modal from "@assets/elements/item_master_modal/Item_Master_Moda";
+
+// HARDCODED UOM OPTIONS
+const UOM_OPTIONS = [
+  "BUNDLE",
+  "BOX",
+  "CASE",
+  "PACK",
+  "PAD",
+  "PCS",
+  "ROLL",
+  "SACK",
+];
 
 const LPN_Register_Input = ({ navigation, route }) => {
   const { current_lpn_id, user_data } = route.params || {};
+
   const { item_master_data, is_loading_items } = use_item_master();
 
   const bin_scanner_ref = useRef(null);
+  const item_code_ref = useRef(null);
+
   const [loading, set_loading] = useState(false);
 
-  // OBJECT STATE PARA SA NAPILING ITEM
-  const [selected_item, set_selected_item] = useState(null);
-
   // FORM FIELDS
+  const [item_code_input, set_item_code_input] = useState("");
   const [qty_input, set_qty_input] = useState("1");
-  const [remarks_input, set_remarks_input] = useState("");
-  const [uom_base, set_uom_base] = useState("");
+  const [uom_base, set_uom_base] = useState(""); // Dito mase-save ang napiling UOM
   const [qty_in_kg, set_qty_in_kg] = useState("0");
   const [warehouse_code, set_warehouse_code] = useState("");
   const [sbin_code, set_sbin_code] = useState("");
 
   // MODAL STATES
-  const [is_item_modal_visible, set_is_item_modal_visible] = useState(false);
   const [is_bin_modal_visible, set_is_bin_modal_visible] = useState(false);
-  const [is_uom_modal_visible, set_is_uom_modal_visible] = useState(false);
+  const [is_uom_modal_visible, set_is_uom_modal_visible] = useState(false); // BAGONG STATE PARA SA UOM MODAL
   const [temp_warehouse, set_temp_warehouse] = useState("");
   const [temp_sbin, set_temp_sbin] = useState("");
 
+  // 1. AUTO-FOCUS SA ITEM CODE FIELD PAGKA-ENTER NG SCREEN
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      item_code_ref.current?.focus();
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  // 2. INTERNALLY AUTO-FOCUS SA SCANNER INPUT KAPAG BUKAS ANG BIN MODAL
   useEffect(() => {
     let focus_interval;
     if (is_bin_modal_visible) {
@@ -63,6 +84,7 @@ const LPN_Register_Input = ({ navigation, route }) => {
     return () => clearInterval(focus_interval);
   }, [is_bin_modal_visible]);
 
+  // STRING DIVISION PARSING (WH02_A-1-1)
   const handle_bin_scan = (scanned_string) => {
     if (!scanned_string) return;
 
@@ -95,11 +117,17 @@ const LPN_Register_Input = ({ navigation, route }) => {
     set_temp_sbin("");
   };
 
+  const handle_select_uom = (selected_uom) => {
+    set_uom_base(selected_uom);
+    set_is_uom_modal_visible(false);
+    Vibration.vibrate(30);
+  };
+
   const handle_save_lpn = async () => {
     if (
-      !selected_item?.item_code ||
+      !item_code_input ||
       !sbin_code ||
-      !selected_item?.uom_base ||
+      !uom_base ||
       !warehouse_code ||
       !qty_input ||
       !qty_in_kg
@@ -113,16 +141,15 @@ const LPN_Register_Input = ({ navigation, route }) => {
 
     set_loading(true);
     const timestamp = format_date(get_date_now());
-    const full_name = `${user_data?.first_name} ${user_data?.last_name}`;
+
     try {
       const new_lpn_entry = {
         batch_code: "",
-        created_by: String(full_name || "ADMIN"),
+        created_by: String(user_data?.username || "ADMIN"),
         creation_date: String(timestamp),
         expiry_date: "",
         gr_number: "",
-        item_code: String(selected_item.item_code).toUpperCase(),
-        item_desc: String(selected_item.item_desc).toUpperCase(),
+        item_code: String(item_code_input).toUpperCase(),
         lpn_id: String(current_lpn_id),
         lpn_status: "Available",
         mfg_date: "",
@@ -133,10 +160,9 @@ const LPN_Register_Input = ({ navigation, route }) => {
         sbin_code: String(sbin_code).toUpperCase(),
         sloc_code: "",
         stype_code: "BULK",
-        uom_base: String(selected_item.uom_base).toUpperCase(),
-        uom_display: String(selected_item.uom_base).toUpperCase(),
+        uom_base: String(uom_base).toUpperCase(),
+        uom_display: String(uom_base).toUpperCase(),
         warehouse_code: String(warehouse_code).toUpperCase(),
-        remarks: String(remarks_input || ""),
       };
 
       const doc_ref = doc(
@@ -168,7 +194,6 @@ const LPN_Register_Input = ({ navigation, route }) => {
           <ActivityIndicator size="large" color="#0284c7" />
         </View>
       )}
-
       {/* HEADER */}
       <View className="px-6 pb-4 flex-row items-center border-b border-slate-100">
         <TouchableOpacity onPress={() => navigation.goBack()} className="p-2">
@@ -183,7 +208,6 @@ const LPN_Register_Input = ({ navigation, route }) => {
           </Text>
         </View>
       </View>
-
       {/* FORM BODY */}
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -193,37 +217,19 @@ const LPN_Register_Input = ({ navigation, route }) => {
           className="flex-1 px-6 pt-6"
           showsVerticalScrollIndicator={false}
         >
-          {/* ITEM CODE SELECTION LOOKUP */}
+          {/* ITEM CODE */}
           <View className="mb-4">
             <Text className="text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">
-              Item Description
+              Item Code
             </Text>
-            <TouchableOpacity
-              onPress={() => set_is_item_modal_visible(true)}
-              activeOpacity={0.7}
-              className="bg-slate-50 border border-slate-300 p-4 rounded-xl flex-row justify-between items-center"
-            >
-              <View className="flex-1 pr-2">
-                {selected_item ? (
-                  <>
-                    <Text className="font-black text-base text-slate-900 uppercase">
-                      {selected_item.item_code}
-                    </Text>
-                    <Text
-                      className="text-xs font-bold text-slate-500 mt-0.5"
-                      numberOfLines={1}
-                    >
-                      {selected_item.item_desc}
-                    </Text>
-                  </>
-                ) : (
-                  <Text className="font-bold text-base text-slate-400">
-                    Tap to select an item...
-                  </Text>
-                )}
-              </View>
-              <ChevronDown size={18} color="#94a3b8" />
-            </TouchableOpacity>
+            <TextInput
+              ref={item_code_ref}
+              className="bg-slate-50 border border-slate-300 p-4 rounded-xl font-bold text-slate-900 text-base"
+              value={item_code_input}
+              onChangeText={set_item_code_input}
+              autoCapitalize="characters"
+              placeholder="Enter code"
+            />
           </View>
 
           {/* QTY, UOM, QTY IN KG ROW */}
@@ -242,27 +248,36 @@ const LPN_Register_Input = ({ navigation, route }) => {
               />
             </View>
 
-            {/* UOM DISPLAY FIELD */}
+            {/* UOM SELECTION FIELD (TINANGGAL ANG STATIC HEIGHT, PINANTAY ANG PADDING) */}
             <View className="flex-1">
               <Text className="text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">
                 UOM
               </Text>
-              <Text className="bg-slate-50 border border-slate-300 p-4 rounded-xl font-bold text-base text-slate-900">
-                {selected_item?.uom_base || ""}
-              </Text>
+              <TouchableOpacity
+                onPress={() => set_is_uom_modal_visible(true)}
+                activeOpacity={0.7}
+                className="bg-slate-50 border border-slate-300 p-4 rounded-xl flex-row justify-between items-center"
+              >
+                <Text
+                  className={`font-bold text-base ${uom_base ? "text-slate-900" : "text-slate-400"}`}
+                >
+                  {uom_base || ""}
+                </Text>
+                <ChevronDown size={18} color="#94a3b8" />
+              </TouchableOpacity>
             </View>
-          </View>
 
-          <View className="flex-row gap-3 mb-6 items-end">
-            {/* REMARKS INPUT */}
+            {/* QTY IN KG INPUT */}
             <View className="flex-1">
               <Text className="text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">
-                Remarks (Optional)
+                Qty In Kg
               </Text>
               <TextInput
+                keyboardType="numeric"
                 className="bg-slate-50 border border-slate-300 p-4 rounded-xl font-bold text-base text-slate-900"
-                value={remarks_input}
-                onChangeText={set_remarks_input}
+                value={qty_in_kg}
+                onChangeText={set_qty_in_kg}
+                placeholder="0"
               />
             </View>
           </View>
@@ -294,6 +309,7 @@ const LPN_Register_Input = ({ navigation, route }) => {
                 </Text>
               </View>
             </View>
+
             <TouchableOpacity
               onPress={() => set_is_bin_modal_visible(true)}
               className="bg-sky-600 py-4 rounded-xl flex-row justify-center items-center"
@@ -310,41 +326,26 @@ const LPN_Register_Input = ({ navigation, route }) => {
           </View>
 
           {/* SUBMIT BUTTONS */}
-          <View className="flex-row gap-3 mb-4">
-            <TouchableOpacity
-              onPress={handle_save_lpn}
-              activeOpacity={0.8}
-              className="flex-1 bg-emerald-600 py-5 rounded-2xl justify-center items-center"
+          <TouchableOpacity
+            onPress={handle_save_lpn}
+            activeOpacity={0.8}
+            className="bg-emerald-600 py-5 rounded-2xl items-center mb-4"
+          >
+            <Text
+              style={{ fontFamily: "Outfit-Bold" }}
+              className="text-white text-lg"
             >
-              <Text
-                style={{ fontFamily: "Outfit-Bold" }}
-                className="text-white text-base"
-              >
-                Confirm & Save LPN
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              className="w-[140px] bg-slate-100 border border-slate-300 py-5 rounded-2xl justify-center items-center"
-            >
-              <Text className="text-slate-500 font-bold text-base">Cancel</Text>
-            </TouchableOpacity>
-          </View>
+              Confirm & Save LPN
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            className="bg-slate-100 py-5 rounded-2xl justify-center items-center"
+          >
+            <Text className="text-slate-500 font-bold text-lg">Cancel</Text>
+          </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
-
-      {/* ITEM MASTER LOOKUP MODAL */}
-      <Item_Master_Modal
-        visible={is_item_modal_visible}
-        onClose={() => set_is_item_modal_visible(false)}
-        item_data={item_master_data}
-        is_loading={is_loading_items}
-        onSelect={(item) => {
-          set_selected_item(item);
-          Vibration.vibrate(30);
-        }}
-      />
-
       {/* MODAL SCANNING WINDOW FOR BIN */}
       <Modal visible={is_bin_modal_visible} transparent animationType="fade">
         <View className="flex-1 bg-black/70 justify-center items-center px-6">
@@ -429,6 +430,66 @@ const LPN_Register_Input = ({ navigation, route }) => {
                 </Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+      {/* MODERN COMPACT UOM SELECTION MODAL (3 OPTIONS PER ROW) */}
+      <Modal visible={is_uom_modal_visible} transparent animationType="fade">
+        <View className="flex-1 bg-black/50 justify-end">
+          <View className="bg-white rounded-t-[40px] p-6 shadow-2xl pb-8">
+            {/* MODAL DRAG BAR & TITLE */}
+            <View className="items-center mb-5">
+              <View className="w-12 h-1 bg-slate-200 rounded-full mb-3" />
+              <Text
+                style={{ fontFamily: "Outfit-Bold" }}
+                className="text-xl text-slate-900"
+              >
+                Select Unit of Measure
+              </Text>
+              <Text className="text-slate-400 text-xs mt-0.5">
+                Choose the base UOM for this asset
+              </Text>
+            </View>
+
+            {/* 3-COLUMN GRID PATTERN (PROPER LEFT-TO-RIGHT ALIGNMENT) */}
+            <View className="flex-row flex-wrap justify-start mb-6">
+              {UOM_OPTIONS.map((uom, index) => {
+                const isSelected = uom_base === uom;
+
+                // Tinitiyak na walang margin-right ang pang-3, pang-6, at pang-9 na item (katapusan ng bawat row)
+                const isThirdColumn = (index + 1) % 3 === 0;
+
+                return (
+                  <TouchableOpacity
+                    key={uom}
+                    onPress={() => handle_select_uom(uom)}
+                    activeOpacity={0.7}
+                    style={{ marginRight: isThirdColumn ? 0 : "3.5%" }}
+                    className={`w-[31%] py-3.5 rounded-xl border items-center justify-center mb-2 ${
+                      isSelected
+                        ? "bg-emerald-50 border-emerald-500"
+                        : "bg-slate-50 border-slate-100"
+                    }`}
+                  >
+                    <Text
+                      className={`font-black text-xs tracking-wide ${
+                        isSelected ? "text-emerald-700" : "text-slate-700"
+                      }`}
+                    >
+                      {uom}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            {/* CLOSE ACTION */}
+            <TouchableOpacity
+              onPress={() => set_is_uom_modal_visible(false)}
+              className="w-full bg-slate-100 py-4 rounded-xl justify-center items-center"
+            >
+              <Text className="text-slate-500 font-bold text-sm">Close</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>

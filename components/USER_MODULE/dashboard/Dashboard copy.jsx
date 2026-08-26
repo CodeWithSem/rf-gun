@@ -16,12 +16,12 @@ import {
   ChevronRight,
   LogOut,
   PackageCheck,
+  Move,
+  AlertCircle,
   ClipboardList,
   Pickaxe,
   QrCode,
   Warehouse,
-  AlertCircle,
-  Cpu,
 } from "lucide-react-native";
 import { useIsFocused } from "@react-navigation/native";
 
@@ -46,6 +46,10 @@ const Dashboard = ({ route, navigation }) => {
       if (focusTimer) clearTimeout(focusTimer);
     };
   }, [isFocused]);
+
+  useEffect(() => {
+    console.log("RF Gun Modules:", user?.rf_gun_module);
+  }, [user]);
 
   // Masterlist ng mga modules
   const all_modules = [
@@ -86,17 +90,8 @@ const Dashboard = ({ route, navigation }) => {
       borderColor: "border-sky-100",
     },
     {
-      id: "mach_management",
-      code: "MACHM",
-      name: "Machine Management",
-      desc: "View and manage warehouse",
-      icon: <Cpu size={24} color="#0284c7" />,
-      color: "bg-sky-50",
-      borderColor: "border-sky-100",
-    },
-    {
       id: "finish_goods",
-      code: "FG",
+      code: "FG", // 💡 Binago mula LPNP patungong FG para mag-match sa output ng user.rf_gun_module
       name: "Finish Goods",
       desc: "LPN Registration for Finish Goods",
       icon: <PackageCheck size={24} color="#0284c7" />,
@@ -109,21 +104,23 @@ const Dashboard = ({ route, navigation }) => {
   const filteredModules = all_modules.filter((module) => {
     if (!user?.rf_gun_module) return false;
 
+    // I-convert ang comma-separated string patungong array (e.g., ["LPNM", "TRO", "PROD", "FG"])
     const allowedArray = user.rf_gun_module
       .split(",")
       .map((item) => item.trim());
 
+    // Unang checkpoint: Dapat kasama ang module code sa allowed array ng user
     const isModuleAllowed = allowedArray.includes(module.code);
 
+    // Pangalawang checkpoint: Kung FG (Finish Goods) ang module, optional restriction base sa role kung kailangan
     if (module.code === "FG") {
+      // Kung gusto mong i-restrict lang din sa PROD role ang FG, i-uncomment ang linyang ito:
+      // return isModuleAllowed && user?.role === "PROD";
       return isModuleAllowed;
     }
 
     return isModuleAllowed;
   });
-
-  // Dynamic layout flag: True kapag higit sa 4 ang naka-assign na modules
-  const isMultiColumn = filteredModules.length > 4;
 
   const handleLogout = () => {
     setShowLogoutModal(false);
@@ -136,7 +133,6 @@ const Dashboard = ({ route, navigation }) => {
       module_id === "production" ||
       module_id === "lpn_management" ||
       module_id === "whse_management" ||
-      module_id === "mach_management" ||
       module_id === "finish_goods"
     ) {
       navigation.navigate(module_id, { user_data: user });
@@ -204,80 +200,40 @@ const Dashboard = ({ route, navigation }) => {
         </Text>
 
         <View className="pb-10">
-          {/* CONDITIONAL LAYOUT: 2-COLUMN GRID (WITHOUT DESC) VS SINGLE COLUMN ROW (WITH DESC) */}
-          {isMultiColumn ? (
-            /* 2-COLUMN GRID LAYOUT (PAG MORE THAN 4: WALANG DESCRIPTION) */
-            <View className="flex-row flex-wrap justify-between">
-              {filteredModules.map((item) => (
-                <TouchableOpacity
-                  key={item.id}
-                  activeOpacity={0.7}
-                  onPress={() => navigate_module(item.id)}
-                  style={{ width: "48%" }}
-                  className="bg-white p-4 rounded-2xl mb-4 border border-slate-200 flex-col justify-between"
+          {filteredModules.map((item) => (
+            <TouchableOpacity
+              key={item.id}
+              activeOpacity={0.7}
+              onPress={() => navigate_module(item.id)}
+              className="bg-white p-4 rounded-xl mb-4 flex-row items-center border border-slate-200"
+            >
+              {/* Colored Icon Box */}
+              <View
+                className={`${item.color} w-14 h-14 rounded-xl items-center justify-center border ${item.borderColor}`}
+              >
+                {item.icon}
+              </View>
+
+              <View className="flex-1 ml-4">
+                <Text
+                  style={{ fontFamily: "Outfit-Bold" }}
+                  className="text-slate-900 text-base"
                 >
-                  <View className="flex-row justify-between items-start">
-                    <View
-                      className={`${item.color} w-12 h-12 rounded-xl items-center justify-center border ${item.borderColor}`}
-                    >
-                      {item.icon}
-                    </View>
-                    <View className="bg-slate-50 p-1.5 rounded-full">
-                      <ChevronRight size={16} color="#cbd5e1" />
-                    </View>
-                  </View>
-
-                  <View className="mt-4">
-                    <Text
-                      style={{ fontFamily: "Outfit-Bold" }}
-                      className="text-slate-900 text-sm leading-5"
-                      numberOfLines={2}
-                    >
-                      {item.name}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
-          ) : (
-            /* SINGLE COLUMN LAYOUT (PAG 4 OR LESS: MAY DESCRIPTION) */
-            <View>
-              {filteredModules.map((item) => (
-                <TouchableOpacity
-                  key={item.id}
-                  activeOpacity={0.7}
-                  onPress={() => navigate_module(item.id)}
-                  className="bg-white p-4 rounded-xl mb-4 flex-row items-center border border-slate-200"
+                  {item.name}
+                </Text>
+                <Text
+                  style={{ fontFamily: "Outfit-Regular" }}
+                  className="text-slate-500 text-xs mt-0.5"
                 >
-                  {/* Colored Icon Box */}
-                  <View
-                    className={`${item.color} w-14 h-14 rounded-xl items-center justify-center border ${item.borderColor}`}
-                  >
-                    {item.icon}
-                  </View>
+                  {item.desc}
+                </Text>
+              </View>
 
-                  <View className="flex-1 ml-4">
-                    <Text
-                      style={{ fontFamily: "Outfit-Bold" }}
-                      className="text-slate-900 text-base"
-                    >
-                      {item.name}
-                    </Text>
-                    <Text
-                      style={{ fontFamily: "Outfit-Regular" }}
-                      className="text-slate-500 text-xs mt-0.5"
-                    >
-                      {item.desc}
-                    </Text>
-                  </View>
-
-                  <View className="bg-slate-50 p-2 rounded-full">
-                    <ChevronRight size={18} color="#cbd5e1" />
-                  </View>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
+              <View className="bg-slate-50 p-2 rounded-full">
+                <ChevronRight size={18} color="#cbd5e1" />
+              </View>
+            </TouchableOpacity>
+          ))}
 
           {/* Walang Modules na Lumabas Fallback */}
           {filteredModules.length === 0 && (

@@ -16,19 +16,24 @@ import {
   Warehouse,
   MapPin,
   Layers,
-  LogOut,
   PackageMinus,
 } from "lucide-react-native";
 
 // ASSETS & CONFIG
 import { firestore_db } from "@assets/scripts/firebase";
-import { doc, getDoc, writeBatch } from "firebase/firestore";
-import { format_date, get_date_now } from "@assets/scripts/functions/format";
+import {
+  doc,
+  getDoc,
+  getDocs,
+  collection,
+  query,
+  where,
+  runTransaction,
+} from "firebase/firestore";
 
-const LPN_Out = ({ navigation, route }) => {
+const Dispatch_Material = ({ navigation, route }) => {
   const { user_data } = route.params || {};
   const scanner_input_ref = useRef(null);
-  const typingTimeoutRef = useRef(null);
 
   const [loading, set_loading] = useState(false);
   const [scanned_value, set_scanned_value] = useState("");
@@ -42,6 +47,7 @@ const LPN_Out = ({ navigation, route }) => {
     return () => clearInterval(focus_interval);
   }, []);
 
+  // SEARCH / SCAN LPN
   const handle_scan = async (val) => {
     const clean_id = val.trim();
     if (!clean_id) return;
@@ -66,75 +72,139 @@ const LPN_Out = ({ navigation, route }) => {
         set_lpn_data(null);
       }
     } catch (e) {
+      console.error("Fetch LPN Error:", e);
       Alert.alert("Error", "Failed to fetch LPN data.");
     } finally {
       set_loading(false);
     }
   };
 
-  const handle_confirm_out = async () => {
+  // DIRECT DISPATCH HANDLER (NO CONFIRMATION ALERT & KEEPS PAGE OPEN)
+  const handle_dispatch = async () => {
     if (!lpn_data) return;
 
-    Alert.alert(
-      "Confirm Out",
-      `Are you sure you want to remove LPN: ${lpn_data.lpn_id} from inventory?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Confirm",
-          onPress: async () => {
-            set_loading(true);
-            const batch = writeBatch(firestore_db);
-            const timestamp = format_date(get_date_now());
-            const unix_timestamp = Math.floor(Date.now() / 1000);
-            const full_name = `${user_data?.first_name} ${user_data?.last_name}`;
-            const current_time_str = new Intl.DateTimeFormat("en-US", {
-              hour: "2-digit",
-              minute: "2-digit",
-              hour12: true,
-            }).format(new Date());
-            const current_user = String(user_data?.username || "ADMIN");
-            try {
-              const active_ref = doc(
-                firestore_db,
-                "DB1_ERP_SYSTEM",
-                "TBL_INVENTORY_COUNT",
-                "DATA",
-                lpn_data.lpn_id,
-              );
-              const history_ref = doc(
-                firestore_db,
-                "DB1_ERP_SYSTEM",
-                "TBL_INVENTORY_HISTORY",
-                "DATA",
-                `${unix_timestamp}_OUT_${lpn_data.lpn_id}_${current_user}`, // Unique ID para sa history
-              );
-              // 1. Move to History
-              batch.set(history_ref, {
-                ...lpn_data,
-                transaction_type: "OUT",
-                out_by: full_name || "ADMIN",
-                out_date: timestamp,
-                out_time: current_time_str,
+    set_loading(true);
+
+    const date_now = new Date();
+    const iso_dispatch_date = date_now.toISOString();
+    const unix_timestamp = Math.floor(Date.now() / 1000);
+    const current_user = String(user_data?.username || "ADMIN");
+    const dispatched_by_fullname =
+      `${user_data?.first_name || ""} ${user_data?.last_name || ""}`.trim() ||
+      "ADMIN";
+
+    try {
+      await runTransaction(firestore_db, async (transaction) => {
+        // ----------------------------------------------------
+        // STEP 1: UPDATE TRANSFER ORDER (IF to_number_ref EXISTS)
+        // ----------------------------------------------------
+        if (lpn_data.to_number_ref) {
+          const to_collection_ref = collection(
+            firestore_db,
+            "DB1_ERP_SYSTEM",
+            "TBL_TRANSFER_ORDER",
+            "DATA",
+          );
+          const to_query = query(
+            to_collection_ref,
+            where("to_number", "==", lpn_data.to_number_ref),
+          );
+          const to_snapshot = await getDocs(to_query);
+
+          if (!to_snapshot.empty) {
+            const to_doc_doc = to_snapshot.docs[0];
+            const to_doc_ref = doc(
+              firestore_db,
+              "DB1_ERP_SYSTEM",
+              "TBL_TRANSFER_ORDER",
+              "DATA",
+              to_doc_doc.id,
+            );
+
+            const to_doc_snap = await transaction.get(to_doc_ref);
+
+            if (to_doc_snap.exists()) {
+              const current_to_data = to_doc_snap.data();
+
+              // Traverse and update specific lpn_id in transfer_list -> lpn_list
+              const updated_transfer_list = (
+                current_to_data.transfer_list || []
+              ).map((transfer_item) => {
+                const updated_lpn_list = (transfer_item.lpn_list || []).map(
+                  (lpn_item) => {
+                    if (lpn_item.lpn_id === lpn_data.lpn_id) {
+                      return {
+                        ...lpn_item,
+                        to_dispatched_by: dispatched_by_fullname,
+                      };
+                    }
+                    return lpn_item;
+                  },
+                );
+
+                return {
+                  ...transfer_item,
+                  lpn_list: updated_lpn_list,
+                };
               });
 
-              // 2. Delete from Active
-              batch.delete(active_ref);
-
-              await batch.commit();
-
-              Alert.alert("Success", "LPN successfully moved to history.", [
-                { text: "OK", onPress: () => navigation.goBack() },
-              ]);
-            } catch (e) {
-              Alert.alert("Process Failed", e.message);
-            } finally {
-              set_loading(false);
+              transaction.update(to_doc_ref, {
+                transfer_list: updated_transfer_list,
+              });
             }
+          }
+        }
+
+        // ----------------------------------------------------
+        // STEP 2: DELETE LPN FROM ACTIVE INVENTORY
+        // ----------------------------------------------------
+        const active_inv_ref = doc(
+          firestore_db,
+          "DB1_ERP_SYSTEM",
+          "TBL_INVENTORY_COUNT",
+          "DATA",
+          lpn_data.lpn_id,
+        );
+        transaction.delete(active_inv_ref);
+
+        // ----------------------------------------------------
+        // STEP 3: ADD RECORD TO TBL_PRODUCTION_CONSUMPTION
+        // ----------------------------------------------------
+        const consumption_ref = doc(
+          firestore_db,
+          "DB1_ERP_SYSTEM",
+          "TBL_PRODUCTION_CONSUMPTION",
+          "DATA",
+          `${unix_timestamp}_${lpn_data.lpn_id}_${current_user}`,
+        );
+
+        transaction.set(consumption_ref, {
+          ...lpn_data,
+          dispatched_by: dispatched_by_fullname,
+          dispatched_date: iso_dispatch_date,
+        });
+      });
+
+      Vibration.vibrate([0, 50, 100, 50]); // Success double vibration
+
+      Alert.alert("Success", `LPN successfully dispatched.`, [
+        {
+          text: "OK",
+          onPress: () => {
+            set_lpn_data(null); // Clear scanned LPN data
+            setTimeout(() => scanner_input_ref.current?.focus(), 100); // Re-focus hidden scanner input
           },
         },
-      ],
-    );
+      ]);
+    } catch (error) {
+      console.error("Dispatch Transaction Error: ", error);
+      Alert.alert(
+        "Dispatch Failed",
+        error.message || "Failed to process dispatch transaction.",
+      );
+    } finally {
+      set_loading(false);
+    }
   };
 
   return (
@@ -145,21 +215,7 @@ const LPN_Out = ({ navigation, route }) => {
         </View>
       )}
 
-      {/* Hidden input for scanner */}
-      {/* <TextInput
-        ref={scanner_input_ref}
-        value={scanned_value}
-        onChangeText={(text) => {
-          set_scanned_value(text);
-          if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-          typingTimeoutRef.current = setTimeout(
-            () => text && handle_scan(text),
-            300,
-          );
-        }}
-        showSoftInputOnFocus={false}
-        style={{ opacity: 0, height: 0 }}
-      /> */}
+      {/* Hidden input for continuous scanner reads */}
       <TextInput
         ref={scanner_input_ref}
         showSoftInputOnFocus={false}
@@ -182,10 +238,10 @@ const LPN_Out = ({ navigation, route }) => {
         </TouchableOpacity>
         <View className="ml-2 flex-1">
           <Text style={{ fontFamily: "Outfit-Bold" }} className="text-xl">
-            LPN Out
+            Dispatch
           </Text>
           <Text className="text-slate-500 text-xs">
-            Scan LPN to remove from stock
+            Scan LPN to dispatch material
           </Text>
         </View>
         <PackageMinus size={24} color="#ef4444" />
@@ -204,7 +260,7 @@ const LPN_Out = ({ navigation, route }) => {
               READY TO SCAN
             </Text>
             <Text className="text-slate-500 text-center mt-2">
-              Please scan the LPN sticker that will be dispatched or moved out.
+              Please scan the LPN sticker that will be dispatched to production.
             </Text>
           </View>
         ) : (
@@ -252,15 +308,17 @@ const LPN_Out = ({ navigation, route }) => {
                 </View>
               </View>
 
+              {/* DIRECT DISPATCH BUTTON */}
               <TouchableOpacity
-                onPress={handle_confirm_out}
+                onPress={handle_dispatch}
                 className="bg-red-500 py-5 rounded-2xl items-center mt-8 shadow-lg"
+                activeOpacity={0.8}
               >
                 <Text
                   style={{ fontFamily: "Outfit-Bold" }}
                   className="text-white text-lg tracking-[1px]"
                 >
-                  Confirm OUT
+                  Dispatch
                 </Text>
               </TouchableOpacity>
 
@@ -280,4 +338,4 @@ const LPN_Out = ({ navigation, route }) => {
   );
 };
 
-export default LPN_Out;
+export default Dispatch_Material;

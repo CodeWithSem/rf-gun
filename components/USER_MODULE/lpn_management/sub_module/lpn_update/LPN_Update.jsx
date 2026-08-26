@@ -17,6 +17,10 @@ import {
   MapPin,
   Layers,
   RefreshCcw,
+  FileText,
+  ArrowRight,
+  MessageSquareText,
+  History,
 } from "lucide-react-native";
 import { useIsFocused } from "@react-navigation/native";
 
@@ -115,7 +119,7 @@ const LPN_Update = ({ navigation, route }) => {
     <SafeAreaView className="flex-1 bg-white" edges={["top"]}>
       {loading && (
         <View className="absolute inset-0 z-50 bg-white/60 justify-center items-center">
-          <ActivityIndicator size="large" color="#0284c7" />
+          <ActivityIndicator size="large" color="#f97316" />
         </View>
       )}
 
@@ -185,133 +189,201 @@ const LPN_Update = ({ navigation, route }) => {
             </View>
 
             {/* SUMMARY CARD FOR FOUND LPN */}
-            <View className="bg-white mx-6 mb-6 p-4 rounded-2xl border border-slate-300">
-              <View className="flex-row justify-between items-start mb-2">
+            <View className="bg-white mx-6 p-6 rounded-2xl border border-slate-300">
+              {/* TOP SECTION: ID & STATUS */}
+              <View className="flex-row justify-between items-center">
                 <View className="flex-1 pr-2">
                   <Text
                     style={{ fontFamily: "Outfit-Bold" }}
-                    className="text-sky-600 text-[10px] uppercase tracking-wider"
+                    className="text-orange-500 text-xs uppercase tracking-[1px] mb-1"
                   >
-                    LPN: {old_lpn_data?.lpn_id}
-                  </Text>
-                  <Text
-                    style={{ fontFamily: "Outfit-Bold" }}
-                    className="text-lg text-slate-900"
-                  >
-                    {old_lpn_data?.item_code}
+                    LPN: {old_lpn_data.lpn_id}
                   </Text>
                 </View>
-                <View className="bg-green-100 px-3 py-1 rounded-full">
-                  <Text className="text-green-700 text-[10px] font-bold uppercase">
-                    {old_lpn_data?.lpn_status || "AVAILABLE"}
+                <View className="bg-green-100 px-4 py-1.5 rounded-full">
+                  <Text className="text-green-700 text-[10px] font-bold uppercase tracking-wider">
+                    {old_lpn_data.lpn_status || "ACTIVE"}
                   </Text>
                 </View>
               </View>
 
-              <View className="flex-row items-center mt-1 space-x-4">
-                <View className="flex-row items-center flex-1">
-                  <View className="bg-slate-100 p-1.5 rounded-lg mr-2">
-                    <Warehouse size={12} color="#475569" />
-                  </View>
-                  <View>
-                    <Text className="text-[9px] text-slate-400 font-bold uppercase">
-                      Warehouse
-                    </Text>
-                    <Text
-                      style={{ fontFamily: "Outfit-Medium" }}
-                      className="text-slate-700 text-xs"
-                    >
-                      {old_lpn_data?.warehouse_code}
-                    </Text>
-                  </View>
-                </View>
-
-                <View className="flex-row items-center flex-1">
-                  <View className="bg-slate-100 p-1.5 rounded-lg mr-2">
-                    <MapPin size={12} color="#475569" />
-                  </View>
-                  <View>
-                    <Text className="text-[9px] text-slate-400 font-bold uppercase">
-                      Bin Code
-                    </Text>
-                    <Text
-                      style={{ fontFamily: "Outfit-Medium" }}
-                      className="text-slate-700 text-xs"
-                    >
-                      {old_lpn_data?.sbin_code}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-
-              <View className="border-t border-slate-50 pt-3 mt-3">
-                <View className="flex-row justify-between items-center">
-                  <View className="flex-row items-center">
-                    <Layers size={14} color="#64748b" />
-                    <Text className="text-slate-500 text-xs ml-1 font-medium">
-                      Total Quantity:
-                    </Text>
-                  </View>
-                  <Text
-                    style={{ fontFamily: "Outfit-Bold" }}
-                    className="text-slate-900 text-xs"
-                  >
-                    {old_lpn_data?.qty_base} {old_lpn_data?.uom_base}
+              <View className="flex-row gap-4 mt-6">
+                <View className="flex-1 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                  <Text className="text-lg text-orange-500 font-bold uppercase">
+                    {old_lpn_data?.item_code || ""}
                   </Text>
-                </View>
-
-                {old_lpn_data?.qty_in_kg > 0 && (
-                  <View className="flex-row justify-between items-center mt-2">
-                    <View className="flex-row items-center">
-                      <View className="w-[14px] items-center">
-                        <Text className="text-[10px]">⚖️</Text>
-                      </View>
-                      <Text className="text-slate-500 text-xs ml-1 font-medium">
-                        Weight (KG):
-                      </Text>
-                    </View>
+                  {old_lpn_data?.item_desc && (
                     <Text
                       style={{ fontFamily: "Outfit-Bold" }}
                       className="text-slate-900 text-xs"
                     >
-                      {old_lpn_data?.qty_in_kg} KG
+                      {old_lpn_data?.item_desc || ""}
+                    </Text>
+                  )}
+                </View>
+              </View>
+
+              {/* LOCATION GRID */}
+              <View className="flex-row gap-3 mt-3">
+                <View className="flex-1 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                  <View className="flex-row gap-1.5 items-center">
+                    <Warehouse size={18} color="#f97316" />
+                    <Text className="text-[10px] text-slate-400 font-bold uppercase">
+                      Warehouse
                     </Text>
                   </View>
-                )}
+                  <Text
+                    style={{ fontFamily: "Outfit-Bold" }}
+                    className="text-slate-900 text-sm mt-2"
+                  >
+                    {old_lpn_data.warehouse_code}
+                  </Text>
+                </View>
+                <View className="flex-1 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                  <View className="flex-row gap-1.5 items-center">
+                    <MapPin size={18} color="#f97316" />
+                    <Text className="text-[10px] text-slate-400 font-bold uppercase">
+                      Bin Location
+                    </Text>
+                  </View>
+                  <Text
+                    style={{ fontFamily: "Outfit-Bold" }}
+                    className="text-slate-900 text-sm mt-2"
+                  >
+                    {old_lpn_data.sbin_code}
+                  </Text>
+                </View>
+              </View>
+
+              {/* REMARKS */}
+              {old_lpn_data?.remarks && (
+                <View className="flex-row gap-4 mt-3">
+                  <View className="flex-1 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                    <View className="flex-row gap-1.5 items-center">
+                      <MessageSquareText size={18} color="#f97316" />
+                      <Text className="text-[10px] text-slate-400 font-bold uppercase">
+                        Remarks
+                      </Text>
+                    </View>
+                    <Text
+                      style={{ fontFamily: "Outfit-Bold" }}
+                      className="text-slate-900 text-xs mt-2"
+                    >
+                      {old_lpn_data?.remarks}
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              {/* QUANTITY SECTION */}
+              <View className="space-y-3 border-t border-slate-50 pt-3 mt-4">
+                <View className="flex-row justify-between items-center bg-slate-50/50 p-3 rounded-xl">
+                  <View className="flex-row items-center">
+                    <Layers size={18} color="#64748b" />
+                    <Text
+                      style={{ fontFamily: "Outfit-Medium" }}
+                      className="text-slate-600 ml-2"
+                    >
+                      Total Quantity
+                    </Text>
+                  </View>
+                  <Text
+                    style={{ fontFamily: "Outfit-Bold" }}
+                    className="text-lg text-slate-900"
+                  >
+                    {old_lpn_data.qty_base.toLocaleString()}{" "}
+                    <Text className="text-xs text-slate-400">
+                      {old_lpn_data.uom_base}
+                    </Text>
+                  </Text>
+                </View>
               </View>
             </View>
 
+            {/* TRANSFER ORDER REFERENCE CARD (Lalabas lang kung may to_number_ref) */}
+            {old_lpn_data?.to_number_ref &&
+              old_lpn_data.to_number_ref.trim() !== "" && (
+                <View className="bg-amber-50/60 mx-6 mt-4 p-4 rounded-2xl border border-amber-200">
+                  <View className="flex-row items-center justify-between border-b border-amber-200/60 pb-2 mb-3">
+                    <View className="flex-row items-center space-x-2">
+                      <View className="bg-amber-100 p-1.5 rounded-lg">
+                        <FileText size={14} color="#d97706" />
+                      </View>
+                      <Text
+                        style={{ fontFamily: "Outfit-Bold" }}
+                        className="ml-1 text-xs text-amber-800 uppercase tracking-wide"
+                      >
+                        {old_lpn_data.to_number_ref}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View className="flex-row items-center justify-between">
+                    {/* FROM LOCATION */}
+                    <View className="flex-1">
+                      <Text className="text-[9px] text-amber-600 font-bold uppercase mb-0.5">
+                        Current Location
+                      </Text>
+                      <Text
+                        style={{ fontFamily: "Outfit-Medium" }}
+                        className="text-slate-800 text-xs"
+                        numberOfLines={1}
+                      >
+                        {old_lpn_data?.warehouse_code || "-"}
+                      </Text>
+                      <Text className="text-[10px] text-slate-500 font-medium">
+                        Bin: {old_lpn_data?.sbin_code || "-"}
+                      </Text>
+                    </View>
+
+                    <View className="px-2">
+                      <ArrowRight size={16} color="#d97706" />
+                    </View>
+
+                    {/* TO LOCATION */}
+                    <View className="flex-1 items-end">
+                      <Text className="text-[9px] text-amber-600 font-bold uppercase mb-0.5">
+                        Target Destination
+                      </Text>
+                      <Text
+                        style={{ fontFamily: "Outfit-Medium" }}
+                        className="text-slate-800 text-xs text-right"
+                        numberOfLines={1}
+                      >
+                        {old_lpn_data?.to_warehouse_code || "-"}
+                      </Text>
+                      <Text className="text-[10px] text-slate-500 font-medium text-right">
+                        Bin: {old_lpn_data?.to_sbin_code || "-"}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              )}
+
             {/* ACTION BUTTONS AREA */}
-            <View className="px-6 space-y-3">
-              {/* PROCEED TO UPDATE BUTTON */}
+            {/* SUBMIT BUTTONS */}
+            <View className="flex-row gap-3 mt-4 mb-20 px-6">
               <TouchableOpacity
                 onPress={handle_proceed_to_update}
                 activeOpacity={0.8}
-                className="bg-orange-500 py-4 rounded-2xl items-center shadow-md flex-row justify-center"
+                className="flex-1 bg-orange-500 py-5 rounded-2xl justify-center items-center"
               >
                 <Text
                   style={{ fontFamily: "Outfit-Bold" }}
                   className="text-white text-base"
                 >
-                  Update Information
+                  Update LPN
                 </Text>
               </TouchableOpacity>
-
-              {/* DYNAMIC RESET / SCAN ANOTHER LPN BUTTON */}
               <TouchableOpacity
                 onPress={() => {
                   set_old_lpn_data(null); // Babalik sa default state layout na walang records
                   Vibration.vibrate(30);
                 }}
-                activeOpacity={0.7}
-                className="bg-white border border-slate-200 py-4 rounded-2xl items-center flex-row justify-center space-x-2 mt-5"
+                className="w-[140px] bg-slate-100 border border-slate-300 py-5 rounded-2xl justify-center items-center"
               >
-                <Barcode size={20} color="#64748b" />
-                <Text
-                  style={{ fontFamily: "Outfit-Bold" }}
-                  className="ml-1 text-slate-500"
-                >
-                  Scan Another LPN
+                <Text className="text-slate-500 font-bold text-base">
+                  Cancel
                 </Text>
               </TouchableOpacity>
             </View>

@@ -44,7 +44,38 @@ const LPN_Update_Input = ({ navigation, route }) => {
   const qty_input_ref = useRef(null);
   const [loading, set_loading] = useState(false);
 
+  // TRANSFER ORDER CONTEXT DETECT
+  const to_number_ref =
+    initial_to_data?.to_number ||
+    old_lpn_data?.to_number_ref ||
+    old_lpn_data?.to_number ||
+    null;
+
   const [to_data, set_to_data] = useState(initial_to_data || null);
+
+  // FETCH TRANSFER ORDER IF TO_NUMBER EXISTS BUT FULL DATA IS MISSING
+  useEffect(() => {
+    const fetch_transfer_order = async () => {
+      if (to_number_ref && !to_data) {
+        try {
+          const to_doc_ref = doc(
+            firestore_db,
+            "DB1_ERP_SYSTEM",
+            "TBL_TRANSFER_ORDER",
+            "DATA",
+            to_number_ref,
+          );
+          const snap = await getDoc(to_doc_ref);
+          if (snap.exists()) {
+            set_to_data(snap.data());
+          }
+        } catch (err) {
+          console.error("Error fetching transfer order ref: ", err);
+        }
+      }
+    };
+    fetch_transfer_order();
+  }, [to_number_ref]);
 
   // Target bin extraction from Transfer Order (if matched with this item)
   const matched_to_item = to_data?.transfer_list?.find((t_item) =>
@@ -251,6 +282,11 @@ const LPN_Update_Input = ({ navigation, route }) => {
         sbin_code: String(sbin_code).toUpperCase(),
         update_date: String(timestamp_str),
         update_by: full_name,
+
+        // CLEAR / EMPTY TO REFERENCES UPON SUCCESSFUL TRANSFER
+        to_number_ref: "",
+        to_warehouse_code: "",
+        to_sbin_code: "",
       };
 
       const count_doc_ref = doc(
@@ -315,6 +351,101 @@ const LPN_Update_Input = ({ navigation, route }) => {
         history_doc_id,
       );
       batch.set(history_doc_ref, history_entry);
+
+      // 3. UPDATE TBL_TRANSFER_ORDER (KUNG MAY NAKATAG NA TRANSFER ORDER)
+      if (to_number_ref) {
+        const to_doc_ref = doc(
+          firestore_db,
+          "DB1_ERP_SYSTEM",
+          "TBL_TRANSFER_ORDER",
+          "DATA",
+          to_number_ref,
+        );
+
+        let latest_to_data = to_data;
+
+        // Ensure we have fresh document snapshot from Firestore if missing locally
+        if (!latest_to_data) {
+          const snap = await getDoc(to_doc_ref);
+          if (snap.exists()) {
+            latest_to_data = snap.data();
+          }
+        }
+
+        if (latest_to_data) {
+          let has_to_changed = false;
+
+          const updated_transfer_list = (
+            latest_to_data.transfer_list || []
+          ).map((t_item) => {
+            let lpn_found_in_item = false;
+
+            const updated_lpn_list = (t_item.lpn_list || []).map((lpn) => {
+              if (String(lpn.lpn_id) === target_lpn_id) {
+                has_to_changed = true;
+                lpn_found_in_item = true;
+                return {
+                  ...lpn,
+                  item_code: String(selected_item.item_code).toUpperCase(),
+                  item_desc: String(selected_item.item_desc),
+                  qty_base: Number(qty_input),
+                  uom_base: String(selected_item.uom_base).toUpperCase(),
+                  uom_display: String(selected_item.uom_base).toUpperCase(),
+                  warehouse_code: String(warehouse_code).toUpperCase(),
+                  sbin_code: String(sbin_code).toUpperCase(),
+                  is_received: true, // Internal tracking marker
+                };
+              }
+              return lpn;
+            });
+
+            if (!lpn_found_in_item) return t_item;
+
+            // Check if ALL LPNs under this transfer_list item are scanned/transferred
+            const all_lpns_received = updated_lpn_list.every((lpn) => {
+              if (String(lpn.lpn_id) === target_lpn_id) return true;
+              return (
+                lpn.is_received === true ||
+                (lpn.warehouse_code === t_item.warehouse_code &&
+                  lpn.sbin_code === t_item.sbin_code)
+              );
+            });
+
+            const new_transfer_status = all_lpns_received
+              ? "Received"
+              : t_item.transfer_status || "Picked";
+
+            const new_received_date = all_lpns_received
+              ? t_item.received_date || iso_now_str
+              : t_item.received_date || "";
+
+            return {
+              ...t_item,
+              lpn_list: updated_lpn_list,
+              transfer_status: new_transfer_status,
+              received_date: new_received_date,
+            };
+          });
+
+          if (has_to_changed) {
+            // Check if ALL transfer_list items now have status === "Received"
+            const is_entire_to_complete = updated_transfer_list.every(
+              (item) => item.transfer_status === "Received",
+            );
+
+            const updated_to_payload = {
+              ...latest_to_data,
+              transfer_list: updated_transfer_list,
+              to_status: is_entire_to_complete
+                ? "Complete"
+                : latest_to_data.to_status || "Pending",
+              ...(is_entire_to_complete && { complete_date: iso_now_str }),
+            };
+
+            batch.set(to_doc_ref, updated_to_payload, { merge: true });
+          }
+        }
+      }
 
       await batch.commit();
 
@@ -458,30 +589,91 @@ const LPN_Update_Input = ({ navigation, route }) => {
               >
                 Bin Location Assignment
               </Text>
+              {to_number_ref && (
+                <View className="bg-orange-100 px-2 py-0.5 rounded-md">
+                  <Text className="text-[10px] font-bold text-orange-700">
+                    {to_number_ref}
+                  </Text>
+                </View>
+              )}
             </View>
 
-            <View className="flex-row gap-3 mb-4">
-              <View className="flex-1 bg-white border border-slate-200 rounded-xl p-3">
-                <Text className="text-[9px] font-bold text-slate-500 mb-1">
-                  WAREHOUSE
-                </Text>
-                <Text className="text-sm font-black text-slate-800">
-                  {warehouse_code || "---"}
-                </Text>
+            {/* CONDITIONAL RENDERING FOR BIN LOCATION DISPLAY */}
+            {to_number_ref && (target_to_wh || target_to_sbin) ? (
+              /* TRANSFER ORDER MODE: SOURCE VS TARGET DESTINATION */
+              <View className="mb-4">
+                <View className="flex-row items-center justify-between bg-white border border-slate-200 rounded-xl p-3">
+                  {/* SOURCE */}
+                  <View className="flex-1">
+                    <Text className="text-[9px] font-bold text-slate-400 uppercase mb-0.5">
+                      Source Bin
+                    </Text>
+                    <Text className="text-xs font-black text-slate-700">
+                      {old_lpn_data?.warehouse_code || "---"}
+                    </Text>
+                    <Text className="text-sm font-black text-slate-900">
+                      {old_lpn_data?.sbin_code || "---"}
+                    </Text>
+                  </View>
+
+                  <View className="px-2">
+                    <ArrowRight size={18} color="#f97316" />
+                  </View>
+
+                  {/* TARGET DESTINATION */}
+                  <View className="flex-1 items-end">
+                    <Text className="text-[9px] font-bold text-orange-500 uppercase mb-0.5">
+                      Target Destination
+                    </Text>
+                    <Text className="text-xs font-black text-slate-700">
+                      {target_to_wh || "---"}
+                    </Text>
+                    <Text className="text-sm font-black text-orange-600">
+                      {target_to_sbin || "---"}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* CURRENT CONFIRMED LOCATION METRIC */}
+                <View className="mt-3 bg-emerald-50 border border-emerald-200 rounded-xl p-3 flex-row justify-between items-center">
+                  <Text className="text-[10px] font-bold text-emerald-700 uppercase">
+                    Current Location:
+                  </Text>
+                  <Text className="text-xs font-black text-emerald-800">
+                    {warehouse_code && sbin_code
+                      ? `${warehouse_code} ${sbin_code}`
+                      : "Pending Scan"}
+                  </Text>
+                </View>
               </View>
-              <View className="flex-1 bg-white border border-slate-200 rounded-xl p-3">
-                <Text className="text-[9px] font-bold text-slate-500 mb-1">
-                  STORAGE BIN
-                </Text>
-                <Text className="text-sm font-black text-slate-800">
-                  {sbin_code || "---"}
-                </Text>
+            ) : (
+              /* NORMAL PROCESS: REGULAR BIN DISPLAY */
+              <View className="flex-row gap-3 mb-4">
+                <View className="flex-1 bg-white border border-slate-200 rounded-xl p-3">
+                  <Text className="text-[9px] font-bold text-slate-500 mb-1">
+                    WAREHOUSE
+                  </Text>
+                  <Text className="text-sm font-black text-slate-800">
+                    {warehouse_code || "---"}
+                  </Text>
+                </View>
+                <View className="flex-1 bg-white border border-slate-200 rounded-xl p-3">
+                  <Text className="text-[9px] font-bold text-slate-500 mb-1">
+                    STORAGE BIN
+                  </Text>
+                  <Text className="text-sm font-black text-slate-800">
+                    {sbin_code || "---"}
+                  </Text>
+                </View>
               </View>
-            </View>
+            )}
+
             {/* BIN SCANNING ACTION BUTTON */}
             <TouchableOpacity
               onPress={() => set_is_bin_modal_visible(true)}
-              className={`bg-sky-600 py-4 rounded-xl flex-row justify-center items-center`}
+              className={`${
+                to_number_ref ? "bg-emerald-600" : "bg-sky-600"
+              } py-4 rounded-xl flex-row justify-center items-center`}
               activeOpacity={0.8}
             >
               <QrCode size={18} color="white" />
@@ -489,7 +681,9 @@ const LPN_Update_Input = ({ navigation, route }) => {
                 style={{ fontFamily: "Outfit-Bold" }}
                 className="text-white ml-2 text-sm"
               >
-                Scan New Bin Location
+                {to_number_ref
+                  ? "Confirm Bin Location"
+                  : "Scan New Bin Location"}
               </Text>
             </TouchableOpacity>
           </View>
